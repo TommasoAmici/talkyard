@@ -19,6 +19,7 @@ package debiki
 
 import com.debiki.core.Prelude._
 import com.debiki.core._
+import com.debiki.core
 import java.{util => ju}
 import org.scalactic.{Good, Or, Bad}
 import play.api.libs.json._
@@ -107,6 +108,7 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
     readJsArray(json, fieldName, optional).value
 
   // Add a 2nd fn, or a param: all elems be of the same type? See below: [PARSEJSARR]
+  // RENAME 'optional' to 'emptyIfAbsent'?
   def readJsArray(json: JsValue, fieldName: St, optional: Bo = false): JsArray = {
     val array = (json \ fieldName).toOption getOrElse {
       if (optional) return JsArray()
@@ -119,6 +121,15 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
           "EsE4GLK3", s"'$fieldName' is not a JsArray, but a ${classNameOf(bad)}")
     }
   }
+
+  def parseOptJsArray(jv: JsValue, fieldName: St): Opt[JsArray] =
+    (jv \ fieldName).toOption map {
+      case a: JsArray => a
+      case JsNull => return None
+      case bad =>
+        throwBadJson(
+          "TyE4MGJ28RP", s"'$fieldName' is not a JsArray, but a ${classNameOf(bad)}")
+    }
 
   /*
   // No way to shorten this?  [PARSEJSARR]
@@ -202,11 +213,60 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
         throwBadJson("EsE5GUMK", s"'$fieldName' is not a string: " + errors.toString())
     }
 
+  def parsePageRef(json: JsValue, fieldName: St): PageRef = {
+    parseOptPageRef(json, fieldName) getOrElse {
+      throwMissing("TyEJSN0PGREF", fieldName)
+    }
+  }
 
+  def parseOptPageRef(json: JsValue, fieldName: St): Opt[PageRef] = Some {
+    val rawRef = parseOptSt(json, fieldName) getOrElse {
+      return None
+    }
+    core.parsePageRef(rawRef) getOrIfBad { errMsg =>
+      throwBadJson("TyEJSBADPGREF", s"Not a page ref: '$rawRef', problem: $errMsg")
+    }
+  }
+
+  /*   id: / postid: / nr: / extid:  pageidpostnr/idnr:123,456  ?
+  def parsePostRef(json: JsValue, fieldName: St): PageRef = {
+    parseOptPostRef(json, fieldName) getOrElse {
+      throwMissing("TyEJSN0POREF", fieldName)
+    }
+  }
+
+  def parseOptPostRef(json: JsValue, fieldName: St): Opt[PostRef] = Some {
+    val rawRef = parseOptSt(json, fieldName) getOrElse {
+      return None
+    }
+    core.parsePageRef(rawRef) getOrIfBad { errMsg =>
+      throwBadJson("TyEJSBADPOREF", s"Not a post ref: '$rawRef', problem: $errMsg")
+    }
+  } */
+
+
+  // RENAME! to just parseRef
   def readParsedRef(json: JsValue, fieldName: String, allowParticipantRef: Boolean): ParsedRef = {
     val refStr = readString(json, fieldName)
-    com.debiki.core.parseRef(refStr, allowParticipantRef = allowParticipantRef) getOrIfBad { problem =>
+    core.parseRef(refStr, allowParticipantRef = allowParticipantRef) getOrIfBad { problem =>
       throwBadJson("TyEBADREFFLD", s"Field '$fieldName': Bad ref: '$refStr', the problem: $problem")
+    }
+  }
+
+
+  def parsePostVoteType(json: JsValue, fieldName: St): PostVoteType = {
+    val voteTypeSt = parseSt(json, fieldName)
+    PostVoteType.apiV0_fromStr(voteTypeSt) getOrElse {
+      throwBadJson("TyEJSNPOVOTY", s"$fieldName: Unsupported vote type: '$voteTypeSt''")
+    }
+  }
+
+
+  def parseNotfLevel(json: JsValue, fieldName: St): NotfLevel = {
+    val whatLevelSt = parseSt(json, fieldName)
+    NotfLevel.fromSt_apiV0(whatLevelSt) getOrElse {
+      throwBadJson("TyEJSNNOTFLV",
+            s"$fieldName: Unsupported notification level: '$whatLevelSt'")
     }
   }
 
@@ -265,7 +325,8 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
   }
 
 
-  def parseInt32(json: JsValue, field: St, alt: St = "", default: Opt[i32] = None): i32 =
+  def parseInt32(json: JsValue, field: St, alt: St = "", default: Opt[i32] = None,
+        min: Opt[i32] = None, max: Opt[i32] = None): i32 =
     readInt(json, fieldName = field, altName = alt, default = default)
 
 
@@ -274,7 +335,7 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
 
 
   def readInt(json: JsValue, fieldName: String, altName: String = "",
-        default: Option[Int] = None): Int =
+        default: Option[Int] = None, min: Opt[i32] = None, max: Opt[i32] = None): Int =
     readOptInt(json, fieldName).orElse(readOptInt(json, altName)).orElse(default)
       .getOrElse(throwMissing("EsE5KPU3", fieldName))
 
@@ -287,12 +348,15 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
      readOptInt(json, fieldName = field, altName = altField)
 
 
-  def readOptInt(json: JsValue, fieldName: String, altName: String = ""): Option[Int] = {
+  def readOptInt(json: JsValue, fieldName: String, altName: String = "",
+          min: Opt[i32] = None, max: Opt[i32] = None): Option[Int] = {
     readOptLong(json, fieldName).orElse(readOptLong(json, altName)) map { valueAsLong =>
-      if (valueAsLong > Int.MaxValue)
-        throwBadJson("EsE5YKP02", s"$fieldName is too large for an Int: $valueAsLong")
-      if (valueAsLong < Int.MinValue)
-        throwBadJson("EsE2PK6S3", s"$fieldName is too small for an Int: $valueAsLong")
+      val maxVal = max getOrElse Int.MaxValue
+      val minVal = min getOrElse Int.MinValue
+      if (valueAsLong > maxVal)
+        throwBadJson("TyEJSNGTMX", s"$fieldName too large: $valueAsLong, max is: $maxVal")
+      if (valueAsLong < minVal)
+        throwBadJson("TyEJSNLTMN", s"$fieldName too small: $valueAsLong, min is: $minVal")
       valueAsLong.toInt
     }
   }

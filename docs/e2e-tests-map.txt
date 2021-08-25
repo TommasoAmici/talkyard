@@ -1315,6 +1315,7 @@ email notifications:  (5ABKR024)
   watching everything:
           - email-notfs-discussion.2browsers.test.ts  TyT2AKBEF05
   new discourse reply:
+            - do-api-like-and-subscribe.2br  TyTEAPILIKESUBS
   new direct message reply:
           - direct-messages-notfs.3browsers.test.ts  TyT602RKDL42
     email notf link:
@@ -1363,6 +1364,12 @@ api:
             - embedded-comments-create-site-import-disqus.2br.test.ts  TyT5KFG0P75.TyT6703MRJ5
   ext id, weird chars and loong id:
           - api-upsert-categories.2browsers.test.ts  TyT602RHK42JF
+  refs:
+    userid:_, pageid:_,
+    ssoid:_ for users,
+    extid:_ for users and pages,
+    username:_, pagepath_:
+            - do-api-like-and-subscribe.2br  TyTEAPILIKESUBS.TyTREFTYPES01
   upsert categories:  (upscats)
           - api-upsert-categories.2browsers.test.ts  TyT94DFKHQC24
   upsert pages:
@@ -1413,8 +1420,10 @@ api:
   full text search:
             - api-search-full-text.test.ts   TyT70ADNEFTD36
   get api:
-          - embcom.comment-counts.2br.cors.test.ts   TyTE2ECOMCOUNTS
-          - embcom.manyframes.comment-counts.2br.cors  TyTE2EMNYFRCOMCNTS
+            - embcom.comment-counts.2br.cors.test.ts   TyTE2ECOMCOUNTS
+            - embcom.manyframes.comment-counts.2br.cors  TyTE2EMNYFRCOMCNTS
+  do api:
+            - do-api-like-and-subscribe.2br  TyTEAPILIKESUBS
   atom feed:
             - TESTS_MISSING
   rss feed: No, there're only Atom feeds.

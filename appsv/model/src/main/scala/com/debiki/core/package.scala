@@ -217,18 +217,66 @@ package object core {
   // ext ids, could estimate the number of people in the organization.)
   type ExtId = String
 
-  type Ref = String  ; RENAME // to RefStr(ing) or RawRef? maybe rename ParsedRef to just Ref?
+  type Ref = String  ; RENAME // to RawRef, and rename ParsedRef to just Ref
+  type RawRef = Ref  //  ... started
 
-  sealed abstract class ParsedRef(val canOnlyBeToParticipant: Boolean = false)
+  sealed trait PatRef
+  sealed trait PageRef {
+    // Why this needed, I thought the compiler would deduce this itself?
+    def asParsedRef: ParsedRef = this.asInstanceOf[ParsedRef]
+  }
+  sealed trait PostRef
+
+  sealed abstract class ParsedRef(
+    val canBeToPat: Bo = true,
+    val canOnlyBeToPat: Bo = false,
+    val canBeToPage: Bo = true)
+
   object ParsedRef {
-    case class ExternalId(value: ExtId) extends ParsedRef
-    case class SingleSignOnId(value: String) extends ParsedRef(true)
-    case class TalkyardId(value: String) extends ParsedRef
-    case class Username(value: String) extends ParsedRef(true)
+    case class ExternalId(value: ExtId)
+      extends ParsedRef with PatRef with PageRef
+
+    case class SingleSignOnId(value: St)
+      extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
+
+    case class TalkyardId(value: St)
+      extends ParsedRef with PatRef with PageRef
+
+    case class PageId(value: core.PageId)
+      extends ParsedRef(canBeToPat = false) with PageRef
+
+    case class PagePath(value: St)
+      extends ParsedRef(canBeToPat = false) with PageRef
+
+    case class UserId(value: core.UserId)
+      extends ParsedRef(canBeToPat = true, canOnlyBeToPat = true) with PatRef
+
+    case class Username(value: St)
+      extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
+
+    case class Groupname(value: St)
+      extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
 
     // Maybe trait PageLookupId { def lookupId: St }  —>  "diid:..." or "https://..." ?
-    case class DiscussionId(diid: St) extends ParsedRef
-    case class EmbeddingUrl(url: St) extends ParsedRef
+    case class DiscussionId(diid: St)
+      extends ParsedRef(canBeToPat = false) with PageRef
+
+    case class EmbeddingUrl(url: St)
+      extends ParsedRef(canBeToPat = false, canBeToPage = false)
+  }
+
+  def parsePatRef(ref: Ref): PatRef Or ErrMsg = {
+    parseRef(ref, allowParticipantRef = true) map { parsedRef =>
+      if (!parsedRef.canBeToPat) return Bad(s"Not a participant ref: $ref")
+      parsedRef.asInstanceOf[PatRef]
+    }
+  }
+
+  def parsePageRef(ref: Ref): PageRef Or ErrMsg = {
+    parseRef(ref, allowParticipantRef = false) map { parsedRef =>
+      if (!parsedRef.canBeToPage) return Bad(s"Not a page ref: $ref")
+      parsedRef.asInstanceOf[PageRef]
+    }
   }
 
   def parseRef(ref: Ref, allowParticipantRef: Boolean): ParsedRef Or ErrMsg = {
@@ -254,15 +302,41 @@ package object core {
       returnBadIfContainsAt(tyId)
       Good(ParsedRef.TalkyardId(tyId))
     }
+    else if (ref startsWith "userid:") {
+      returnBadIfDisallowParticipant()
+      val idSt = ref drop "userid:".length
+      val id = idSt.toIntOption getOrElse {
+        return Bad("Not an integer: " + ref)
+      }
+      if (Pat.isGuestId(id))
+        return Bad("Not a user, but a guest id: " + ref)
+      if (Pat.isBuiltInGroup(id))
+        return Bad("Not a user, but a built-in group id: " + ref)
+      Good(ParsedRef.UserId(id))
+    }
     else if (ref startsWith "username:") {
       returnBadIfDisallowParticipant()
       val username = ref drop "username:".length
       returnBadIfContainsAt(username)
       Good(ParsedRef.Username(username))
     }
+    else if (ref startsWith "groupname:") {
+      returnBadIfDisallowParticipant()
+      val groupname = ref drop "groupname:".length
+      returnBadIfContainsAt(groupname)
+      Good(ParsedRef.Groupname(groupname))
+    }
     else if (ref startsWith "diid:") {
       val discId = ref drop "diid:".length
       Good(ParsedRef.DiscussionId(discId))
+    }
+    else if (ref startsWith "pageid:") {
+      val id = ref drop "pageid:".length
+      Good(ParsedRef.PageId(id))
+    }
+    else if (ref startsWith "pagepath:") {
+      val path = ref drop "pagepath:".length
+      Good(ParsedRef.PagePath(path))
     }
     else if (ref startsWith "emburl:") {
       val url = ref drop "emburl:".length

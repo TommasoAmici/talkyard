@@ -2195,7 +2195,9 @@ trait PostsDao {
       val voter = tx.loadTheParticipant(voterId)
       throwIfMayNotSeePost(post, Some(voter))(tx)
 
-      tx.deleteVote(pageId, postNr = postNr, voteType, voterId = voterId)
+      val gotDeleted = tx.deleteVote(pageId, postNr = postNr, voteType, voterId = voterId)
+      throwForbiddenIf(!gotDeleted, "TyE50MWW14",
+            s"No $voteType vote by ${voter.nameHashId} on post id ${post.id} to delete")
 
       // Don't delete — for now. Because that'd result in many emails
       // getting sent, if someone toggles a Like on/off.  [toggle_like_email]
@@ -2287,8 +2289,12 @@ trait PostsDao {
           Set(postNr)
         }
 
-      tx.updatePostsReadStats(pageId, postsToMarkAsRead, readById = voterId,
-        readFromIp = voterIp)
+      if (voterIp != "SKIP_IP") {  CLEAN_UP // change to Opt[IpAdr] instead?
+                                            // Or to:  PatIpAdr(..) | BackendApi   ?
+                                            // is uninteresting if via backend API
+        tx.updatePostsReadStats(pageId, postsToMarkAsRead, readById = voterId,
+              readFromIp = voterIp)
+      }
       updatePageAndPostVoteCounts(post, tx)
       updatePagePopularity(page.parts, tx)
       addUserStats(UserStats(post.createdById, numLikesReceived = 1))(tx)
