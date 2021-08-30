@@ -395,6 +395,7 @@ interface Post {
   unsafeSource?: string;
   sanitizedHtml?: string;
   tags?: string[];
+  tags2?: Tag[];
   numPendingFlags?: number;
   numHandledFlags?: number;
 }
@@ -752,6 +753,22 @@ interface CategoryPatch extends Category {  // or Partial<Category>?
 }
 
 
+
+interface TagType {
+  id: TagTypeId;
+  canTagWhat: ThingType;
+  dispName: St;
+}
+
+
+interface Tag {
+  id: TagId;
+  tagTypeId: TagTypeId;
+  onPatId?: PatId;
+  onPostId?: PostId;
+}
+
+
 interface Topic {
   pageId: string;
   pageRole: PageRole;
@@ -1088,7 +1105,11 @@ interface Store extends Origins, DiscStore, PartialEditorStoreState {
 
   debugStartPageId: string;
 
+  tagTypes: { [tagTypeId: number]: TagType };
+
+  // old
   tagsStuff?: TagsStuff;
+
   superadmin?: SuperAdminStuff;
 }
 
@@ -1646,6 +1667,9 @@ interface StorePatch extends EditorStorePatch {
 
   deletePageIds?: PageId[];
   deleteDraft?: DraftDeletor;
+
+  // If pat created a new tag type.
+  newTagType?: TagType;
 
   // Some pages get created lazily, namely embedded comments pages. They get
   // created when someone posts the first comment, or posts the first Like vote,

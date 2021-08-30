@@ -180,16 +180,41 @@ object Prelude {   CLEAN_UP; RENAME // to BugDie and re-export the interesting
   }
 
 
-  sealed abstract class DieOrComplain  // or rename to "ComplainHow" or "Angry"?
+  sealed abstract class DieOrComplain {  RENAME // to ReqAborter (request aborter)
+    def require(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
+      if_(!test, errCode, errMsg)
+    }
+    def if_(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
+      dieIf(test, errCode, errMsg)
+    }
+    def now(errCode: St, errMsg: St = ""): Nothing = {
+      die(errCode, errMsg)
+    }
+  }
+
   object Die extends DieOrComplain
+
   object ThrowNotFound extends DieOrComplain
-  object ThrowBadReq extends DieOrComplain
+
+  object ThrowBadReq extends DieOrComplain {
+    override def if_(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
+      if (test) {
+        throw new BadRequestEx(s"$errMsg [$errCode]")
+      }
+    }
+    override def now(errCode: St, errMsg: St): Nothing = {
+      throw new BadRequestEx(s"$errMsg [$errCode]")
+    }
+  }
+
   object ThrowForbidden extends DieOrComplain
+
 
   // When parsing user provided data from a HTTP request, we should throw a
   // Bad Request exception, if the data is bad.  However not when doing
   // server internal things — then, die() or some-logger.warn() instead.
   //
+  @deprecated("now", "use DieOrComplain.if_() and now() instead")
   def dieOrComplain(errMsg: ErrMsg, doWhat: DieOrComplain): Nothing = {
     doWhat match {
       case Die => die(errorCode = null, errMsg)  // err code should be incl in errMsg

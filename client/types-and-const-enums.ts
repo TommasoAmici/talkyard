@@ -71,6 +71,7 @@ type Elm = Element;
 
 type SiteData = any;   // [3SD5PB7]
 
+// Many many [opaque_type]s!
 type PageId = string;
 type PostId = number;
 type PostNr = number;
@@ -80,6 +81,8 @@ type CatId = number;
 type CategoryId = number;   // too long name!
 type CatRef = string;
 type CategoryRef = string;  //
+type TagTypeId = Nr;
+type TagId = Nr;
 type SiteId = number;
 type SiteVersion = number;
 type LoginId = string;
@@ -163,6 +166,16 @@ const enum TopicFilters {
   ShowDeleted = 'ShowDeleted',
 }
 
+
+const enum ThingType {
+  Pats = 31,
+  Posts = 224,
+}
+
+const enum No {
+  PageIdSt = '0',
+  TagId = 0,
+}
 
 const enum ReviewDecision {
   // 1nnn = Accept.

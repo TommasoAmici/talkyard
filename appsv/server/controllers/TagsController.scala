@@ -18,12 +18,14 @@
 package controllers
 
 import com.debiki.core._
+import com.debiki.core.Prelude.ThrowBadReq
 import debiki.{JsonMaker, RateLimits, SiteTpi}
 import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import play.api.libs.json._
 import javax.inject.Inject
 import play.api.mvc.{Action, ControllerComponents}
+import talkyard.server.JsX
 
 
 class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
@@ -36,7 +38,8 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
-  def tagsApp(clientRoute: String): Action[Unit] = GetAction { apiReq =>
+  // For now, admin only?
+  def tagsApp(clientRoute: String): Action[Unit] = AdminGetAction { apiReq =>
     _root_.controllers.dieIfAssetsMissingIfDevTest()
     val siteTpi = SiteTpi(apiReq)
     CSP_MISSING
@@ -45,12 +48,36 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  def createTagType: Action[JsValue] = AdminPostJsonAction(
+        maxBytes = 2000) { req =>  // RateLimits.CreateTag,
+    import req.{dao, theRequester}
+    val tagTypeMaybeId: TagType = JsX.parseTagType(req.body, Some(theRequester.id),
+          dieOrComplain = ThrowBadReq)
+    val tagType = dao.writeTx { (tx, staleStuff) => {
+      val tagType =
+           if (tagTypeMaybeId.id == 0) tagTypeMaybeId
+           else tagTypeMaybeId.copy(id = 1)(ifBad = ThrowBadReq) // = 1 for now, testing
+      tx.upsertTagType(tagType)
+      tagType
+    }}
+    OkSafeApiJson(JsX.JsTagType(tagType))
+  }
+
+
+  def listTagTypes(forWhat: i32, tagNamePrefix: Opt[St]): Action[U] = GetAction { req =>
+    val tagTypes = req.dao.getTagTypes(forWhat, tagNamePrefix getOrElse "")
+    OkSafeJson(JsArray(tagTypes map JsX.JsTagType))
+  }
+
+
+  @deprecated
   def loadAllTags: Action[Unit] = GetAction { request =>
     val tags = request.dao.loadAllTagsAsSet()
     OkSafeJson(JsArray(tags.toSeq.map(JsString)))
   }
 
 
+  @deprecated
   def loadTagsAndStats: Action[Unit] = GetAction { request =>
     val tagsAndStats = request.dao.loadTagsAndStats()
     val isStaff = request.isStaff
@@ -67,6 +94,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  @deprecated
   def loadMyTagNotfLevels: Action[Unit] = GetAction { request =>
     val notfLevelsByTagLabel = request.dao.loadTagNotfLevels(request.theUserId, request.who)
     OkSafeJson(JsonMaker.makeTagsStuffPatch(Json.obj(
@@ -76,6 +104,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  @deprecated
   def setTagNotfLevel: Action[JsValue] = PostJsonAction(RateLimits.ConfigUser, maxBytes = 500) { request =>
     val body = request.body
     val tagLabel = (body \ "tagLabel").as[String]
@@ -88,6 +117,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  @deprecated
   def addRemoveTags: Action[JsValue] = PostJsonAction(RateLimits.EditPost, maxBytes = 5000) { request =>
     val pageId = (request.body \ "pageId").as[PageId]
     val postId = (request.body \ "postId").as[PostId]  // yes id not nr

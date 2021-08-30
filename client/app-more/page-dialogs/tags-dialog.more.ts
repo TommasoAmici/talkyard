@@ -35,6 +35,21 @@ const PatternInput = utils.PatternInput;
 
 let tagsDialog;
 
+interface TagsDiagProps {
+  // No props.
+}
+
+interface TagsDiagState {
+  store?: Store;
+  isOpen?: Bo;
+  isLoading?: Bo;
+  tagTypes: TagType[],
+  allTags; // old
+  post?: Post;
+  curTags: Tag[],
+  tags: St[], // old
+}
+
 
 export function openTagsDialog(store: Store, post: Post) {
   if (!tagsDialog) {
@@ -49,10 +64,10 @@ const TagsDialog = createComponent({
 
   getInitialState: function () {
     return {
-      isOpen: false,
       tags: [],
+      tagTypes: [],
       allTags: [],
-    };
+    } as TagsDiagState;
   },
 
   componentWillUnmount: function() {
@@ -60,19 +75,28 @@ const TagsDialog = createComponent({
   },
 
   open: function(store, post: Post) {
-    this.setState({ isOpen: true, isLoading: true });
+    const newState: Partial<TagsDiagState> = { isOpen: true, isLoading: true };
+    this.setState(newState);
+    Server.listTagTypes(ThingType.Pats, '', (tagTypes: TagType[]) => {
+      if (this.isGone) return;
+      const newState: Partial<TagsDiagState> = { tagTypes };
+      this.setState(newState);
+    });
+    // old
     Server.loadAllTags((tags) => {
       if (this.isGone) return;
       this.setState({ allTags: tags });
     });
     Server.loadEditorAndMoreBundles(() => {
       if (this.isGone || !this.state.isOpen) return;
-      this.setState({
+      const newState: Partial<TagsDiagState> = {
         isLoading: false,
         store: store,
         post: post,
-        tags: _.clone(post.tags),
-      });
+        tags: _.clone(post.tags),  // old
+        curTags: _.clone(post.tags2),
+      };
+      this.setState(newState);
     });
   },
 
@@ -80,9 +104,71 @@ const TagsDialog = createComponent({
     this.setState({ isOpen: false, store: null, post: null, tags: null });
   },
 
-  onSelectChange: function(labelsAndValues: any) {
+  // old
+  __onSelectChange: function(labelsAndValues: any) {
     labelsAndValues = labelsAndValues || []; // is null if the clear-all [x] button pressed
     this.setState({ tags: labelsAndValues.map(labelValue => labelValue.value) });
+  },
+
+  onSelectChange: function(labelsAndValues: any) {
+    const state: TagsDiagState = this.state;
+    labelsAndValues = labelsAndValues || []; // is null if the clear-all [x] button pressed
+    const curTags = state.curTags;
+    const newCurTags = [];
+    for (const labVal of labelsAndValues) {
+      const tagOrTagTypeId = parseInt(labVal.value);
+      const isTagId = tagOrTagTypeId > 0;
+      const tagId = isTagId && tagOrTagTypeId;
+      const tagTypeId = !isTagId && -tagOrTagTypeId;  // undo negate_tagtype_id
+      const origTag: Tag | U =
+              _.find(state.post.tags2, t => t.id === tagId || t.tagTypeId === tagTypeId);
+      let newTag: Tag | U;
+      if (!origTag) {
+        // @ifdef DEBUG
+        dieIf(!tagTypeId, 'TyE2F0MW25')
+        // @endif
+        newTag = tagTypeId && {
+          // or just -1, -2, -3, -4? But then how do we know if it's a tag or a tag type
+          id: 0, // -tagTypeId,  // 0 // what id? if < 0, will think it's a tag type again, maybe ok?
+          tagTypeId,
+          onPostId: state.post.uniqueId,
+        }
+      }
+      /*
+      if (isTagId) {
+        const tagId = tagOrTagTypeId;
+        const tag: Tag | U = _.find(state.post.tags2,
+                t => t.id === tagId && (t.id > 0 || t.tagTypeId === -tagOrTagTypeId));
+        // @ifdef DEBUG
+        dieIf(!tag, 'TyE2F0MW25')
+        // @endif
+        newCurTags.push(tag);
+      }
+      /*
+      else if (tagOrTagTypeId === 0) {
+        // ?
+      } * /
+      else {
+        const tagTypeId = -tagOrTagTypeId;  // undo negate_tagtype_id
+        const tagType: TagType | U = _.find(state.tagTypes, tt => tt.id === tagTypeId);
+        // @ifdef DEBUG
+        dieIf(!tagType, 'TyE7J0MW27')
+        // @endif
+        const newTag: Tag = {
+          // or just -1, -2, -3, -4? But then how do we know if it's a tag or a tag type
+          id: -tagTypeId,  // 0 // what id? if < 0, will think it's a tag type again, maybe ok?
+          tagTypeId,
+          onPostId: state.post.uniqueId,
+        }
+        newCurTags.push(newTag);
+      }*/
+      const origOrNewTag = origTag || newTag;
+      if (origOrNewTag) {
+        newCurTags.push(origOrNewTag);
+      }
+    }
+    this.setState({ tags: newCurTags }); // labelsAndValues.map(labelValue => labelValue.value) });
+    //this.setState({ tags: labelsAndValues.map(labelValue => labelValue.value) });
   },
 
   setCanAddTag: function(canAddTag: boolean) {
@@ -106,10 +192,9 @@ const TagsDialog = createComponent({
   },
 
   render: function () {
-    const state = this.state;
-    const post: Post = state.post;
-    let title;
-    let content;
+    const state: TagsDiagState = this.state;
+    let title: St | U;
+    let content: RElm | U;
 
     if (this.state.isLoading)
       return r.p({}, "Loading...");
@@ -118,13 +203,18 @@ const TagsDialog = createComponent({
       // Nothing.
     }
     else {
+      const post: Post = state.post;
       dieIf(!post, 'EsE4GK0IF2');
       title = post.nr === BodyNr ? "Page tags" : "Post tags";   // I18N tags, here and below
       content =
         r.div({ className: 'esTsD_CreateTs' },
-          rb.ReactSelect({ multi: true, value: makeLabelValues(this.state.tags),
+          rb.ReactSelect({ multi: true,
+                value: makeTagLabelValues(state.curTags, state.tagTypes),
+                                            //makeLabelValues(state.tags),
             className: 'esTsD_TsS', placeholder: "Select tags",
-            options: makeLabelValues(this.state.allTags), onChange: this.onSelectChange }),
+            options: makeTagTypeLabelValues( // makeLabelValues(
+                  state.tagTypes), onChange: this.onSelectChange }),
+                  //this.state.allTags), onChange: this.onSelectChange }),
           r.div({},
             PatternInput({ label: "Create tag:", ref: 'newTagInput', placeholder: "tag-name",
               onChangeValueOk: (value, ok) => this.setCanAddTag(ok),
@@ -150,6 +240,26 @@ const TagsDialog = createComponent({
 });
 
 
+function makeTagLabelValues(tags: Tag[], tagTypes: TagType[]) {
+  return tags.map(tag => {
+    const tagType = _.find(tagTypes, it => it.id === tag.tagTypeId);
+    return {
+      label: tagType ? tagType.dispName : `tagtypeid:${tag.tagTypeId}`,
+      value: tag.id,
+    };
+  });
+}
+
+
+function makeTagTypeLabelValues(tagTypes: TagType[]) {
+  return tagTypes.map(tagType => {
+    // Minus means it's a tag type id, not a tag id, negate_tagtype_id.
+    return { label: tagType.dispName, value: -tagType.id };
+  });
+}
+
+
+// old
 function makeLabelValues(tags: string[]) {
   return tags.map(tag => {
     return { label: tag, value: tag };

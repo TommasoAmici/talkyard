@@ -589,6 +589,27 @@ export const testPost = postJsonSuccess;
 type JsonData = object | any[];
 type OnErrorFn = (xhr: XMLHttpRequest) => any;
 
+
+/// Posts JSON to the server, and uses the response to patch the store. Thereafter,
+/// passes the response to onOk — for example, to scroll to or highlight something
+/// that the user just craeted or edited.
+///
+function postAndPatchStore(
+  urlPath: string,
+  onOk: ((response: any) => void) | UseBeacon,
+  data: JsonData | OnErrorFn,
+  onError?: JsonData | OnErrorFn,
+  options?: { showLoadingOverlay?: boolean },  // default true, for POST requests
+  ) {
+  postJsonSuccess(urlPath, response => {
+    ReactActions.patchTheStore(response);
+    if (_.isFunction(onOk)) {
+      onOk(response);
+    }
+  }, data, onError, options);
+}
+
+
 /** Return Server.IgnoreThisError from error(..) to suppress a log message and error dialog.
   */
 function postJsonSuccess(
@@ -2063,6 +2084,18 @@ export function editPostSettings(postId: PostId, settings: PostSettings) {
 }
 
 
+export function createTagType(newTagType: TagType, onOk: (newWithId: TagType) => Vo) {
+  postAndPatchStore(`/-/create-tag-type`, onOk, newTagType);
+}
+
+
+export function listTagTypes(forWhat: ThingType, prefix: St,
+        onOk: (tagTypes: TagType[]) => Vo) {
+  get(`/-/list-tag-types?forWhat=${forWhat}&tagNamePrefix=${prefix}`, onOk);
+}
+
+
+// deprecated
 export function loadAllTags(success: (tags: string[]) => void) {
   get('/-/load-all-tags', success);
 }

@@ -2,6 +2,23 @@
 --  — move some / most-of ?  this db-wip stuff to there instead?
 --
 
+-- Tags:
+create domain show_tag_how_d as i16_d;
+alter domain show_tag_how_d add constraint show_tag_how_d_c_vals_in check (
+    value in (0, 16));
+
+-- Skip, old:
+-- create table prop_defs_t(
+--   allowed_value_types_c  prop_type_d[],   -- extra table = overkill
+--   allowed_value_prop_set_c  —> prop_defs_t,  ?? what ?? not  prop_def_sets_t ?
+--                                              or did I mean:  prop_defs_t[]  but then fks won't work?
+--   allow_multi_vals_c,
+--   show_where_c,
+--   sort_order_c,
+-- );
+
+
+
 -- I deleted constraint:
 --  alter table users3 drop constraint dw1_users_emlntf__c;
 -- later, change col type to Int, add 0 < ... < 1000 constraint?

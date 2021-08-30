@@ -461,7 +461,7 @@ object RateLimits {
   // Or maybe proportionally to num topics?
   // Example:  10 000 topics —>  <= 5% * 10 000 = 500 cats?
 
-  // CreateTag
+  val CreateTag = ConfigUser // for now, hmm
   // But not until after > 50 tags?
 
 

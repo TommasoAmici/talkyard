@@ -364,11 +364,16 @@ package object core {
   def isPageTempId(pageId: PageId): Boolean =
     pageId.length == 10 && pageId.startsWith("2000") // good enough for now
 
-  type Tag = String
+  type TagTypeId = i32
+  type TagId = i32
+
+  // Old ------------
+  type Tag_old = String
   type TagDefId = Int
   type TagLabelId = Int
   type TagLabel = String
   val NoTagId: TagLabelId = 0
+  // ----------------
 
   /** Email identities are strings, all others are numbers but converted to strings. */
   type IdentityId = String

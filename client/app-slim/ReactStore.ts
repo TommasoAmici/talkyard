@@ -1557,6 +1557,13 @@ function patchTheStore(storePatch: StorePatch) {  // REFACTOR just call directly
     addRestrictedCategories(store.me.restrictedCategories, store.currentCategories);
   }
 
+  if (storePatch.newTagType) {
+    const newTagType = storePatch.newTagType;
+    store.tagTypes = { ...store.tagTypes }
+    store.tagTypes[newTagType.id] = newTagType;
+  }
+
+  // Old
   if (storePatch.tagsStuff) {
     // [redux] modifying the store in place, again.
     store.tagsStuff = _.assign(store.tagsStuff || {}, storePatch.tagsStuff);

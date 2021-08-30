@@ -1693,7 +1693,16 @@ const FeatureSettings = createFactory({
           }
         }),
 
-        // Later enableTags
+        // Blogs have their own tags system, probably no need to use Ty's too.
+        !isForumEnabled ? null : Setting2(props, {
+          type: 'checkbox', label: "Enable tags",
+          className: 'e_EnbTagsCB',
+          help: "Unckeck to disable page tags.",
+          getter: (s: Settings) => s.enableTags,
+          update: (newSettings: Settings, target) => {
+            newSettings.enableTags = target.checked;
+          }
+        }),
 
         !isForumEnabled ? null : Setting2(props, {
           type: 'checkbox', label: "Enable chat",

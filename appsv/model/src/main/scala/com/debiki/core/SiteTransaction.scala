@@ -261,6 +261,15 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def movePostsReadStats(oldPageId: PageId, newPageId: PageId,
     newPostNrsByOldNrs: Map[PostNr, PostNr]): Unit
 
+  def loadAllTagTypes(): Seq[TagType]
+  def upsertTagType(tagType: TagType): U
+  def hardDeleteTagType(tagType: TagType): Bo
+  def addTag(tag: Tag): U
+  def removeTags(tags: Seq[Tag]): U
+  def loadTagsByPatId(patIds: PatId): Seq[Tag]
+  def loadTagsToRenderPage(pageId: PageId): Seq[Tag]
+
+  // -- Old: ------------------
   def loadAllTagsAsSet(): Set[TagLabel]
   def loadTagsAndStats(): Seq[TagAndStats]
   def loadTagsByPostId(postIds: Iterable[PostId]): Map[PostId, Set[TagLabel]]
@@ -272,6 +281,7 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def setTagNotfLevel(userId: UserId, tagLabel: TagLabel, notfLevel: NotfLevel): Unit
   def loadTagNotfLevels(userId: UserId): Map[TagLabel, NotfLevel]
   def listUsersWatchingTags(tags: Set[TagLabel]): Set[UserId]
+  // --------------------------
 
   def loadFlagsFor(pagePostNrs: Iterable[PagePostNr]): immutable.Seq[PostFlag]
   def clearFlags(pageId: PageId, postNr: PostNr, clearedById: UserId): Unit

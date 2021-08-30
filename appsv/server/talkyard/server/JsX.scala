@@ -623,6 +623,60 @@ object JsX {   RENAME // to JsonPaSe
       "deletedAtMs" -> JsDateMsOrNull(category.deletedAt))
   }
 
+
+  def JsTagType(tagType: TagType): JsObject = {
+    Json.obj(
+        "id" -> tagType.id,
+        "canTagWhat" -> tagType.canTagWhat,
+        "tagName" -> tagType.dispName)
+  }
+
+
+  def parseTagType(jsVal: JsValue, createdById: Opt[PatId], dieOrComplain: DieOrComplain)
+          : TagType = {
+    val jOb = asJsObject(jsVal, "tag type")
+    val id = parseInt32(jOb, "id")
+    val canTagWhat = parseInt32(jOb, "canTagWhat")
+    val dispName = parseSt(jOb, "dispName")
+    val createdByIdInJson = parseOptInt32(jOb, "createdById")
+    createdById foreach { id =>
+      if (createdByIdInJson.isSomethingButNot(id)) {
+        dieOrComplain.now("TyE2MW04MEFQ2", "createdById in JSON is wrong")
+      }
+    }
+    val byId = createdById.orElse(createdByIdInJson) getOrDie "TyE603MRAI5"
+    TagType(
+          id = id,
+          canTagWhat = canTagWhat,
+          urlSlug_unimpl = None,
+          dispName = dispName,
+          createdById = byId)(dieOrComplain)
+  }
+
+
+  def JsTag(tag: Tag): JsObject = {
+    Json.obj(
+        "id" -> tag.id,
+        "tagTypeId" -> tag.tagTypeId,
+        "onPatId" -> JsNum32OrNull(tag.onPatId),
+        "onPostId" -> JsNum32OrNull(tag.onPostId))
+  }
+
+
+  def parseTag(jsVal: JsValue, ifBad: DieOrComplain): Tag = {
+    val jOb = asJsObject(jsVal, "tag")
+    val id = parseInt32(jOb, "id")
+    val tagTypeId = parseInt32(jOb, "tagTypeId")
+    val onPatId = parseOptInt32(jOb, "onPatId")
+    val onPostId = parseOptInt32(jOb, "onPostId")
+    Tag(id = id,
+          tagTypeId = tagTypeId,
+          parentTagId_unimpl = None,
+          onPatId = onPatId,
+          onPostId = onPostId)(ifBad)
+  }
+
+
   def JsPagePath(pagePath: PagePath): JsValue =
     Json.obj(  // dupl code (4AKBS03)
       "value" -> pagePath.value,

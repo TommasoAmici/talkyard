@@ -26,6 +26,7 @@ import RdbUtil._
 
 /** Adds and removes post tags. Page tags = tags added to the page body post (post nr 1).
   */
+@deprecated("now", "Use TagsRdbMixin instead")
 trait TagsSiteDaoMixin extends SiteTransaction {
   self: RdbSiteTransaction =>
 
@@ -89,7 +90,7 @@ trait TagsSiteDaoMixin extends SiteTransaction {
   }
 
 
-  def removeTagsFromPost(tags: Set[Tag], postId: PostId) {
+  def removeTagsFromPost(tags: Set[Tag_old], postId: PostId) {
     if (tags.isEmpty)
       return
     val statement = s"""

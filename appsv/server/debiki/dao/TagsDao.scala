@@ -71,6 +71,10 @@ trait TagsDao {
   this: SiteDao =>
 
 
+  def getTagTypes(forWhat: i32, tagNamePrefix: St): Seq[TagType] =
+    // For now
+    readTx(_.loadAllTagTypes())
+
   def loadAllTagsAsSet(): Set[TagLabel] =
     readOnlyTransaction(_.loadAllTagsAsSet())
 
@@ -87,7 +91,7 @@ trait TagsDao {
     loadTagsByPostId(Seq(postId)).getOrElse(postId, Set.empty)
 
 
-  def addRemoveTagsIfAuth(pageId: PageId, postId: PostId, tags: Set[Tag], who: Who)
+  def addRemoveTagsIfAuth(pageId: PageId, postId: PostId, tags: Set[Tag_old], who: Who)
         : JsObject = {
 
     throwForbiddenIf(tags.size > MaxNumTags,
@@ -114,7 +118,7 @@ trait TagsDao {
         "EsE4GKU02", o"""Wrong page id: Post $postId is located on page ${post.pageId},
             not page $pageId — perhaps it was just moved""")
 
-      val oldTags: Set[Tag] = tx.loadTagsForPost(post.id)
+      val oldTags: Set[Tag_old] = tx.loadTagsForPost(post.id)
 
       val tagsToAdd = tags -- oldTags
       val tagsToRemove = oldTags -- tags

@@ -84,9 +84,17 @@ const AllTagsPanel = createFactory({
     var tagTableRows = tagsAndStats.map(tagAndStats =>
         TagTableRow({ store: store, tagAndStats: tagAndStats, myTagNotfLevels: myTagNotfLevels }));
 
+    function onTagTypeCreated(newTagType: TagType) {
+      console.log(`Just created: ` + JSON.stringify(newTagType, undefined, 4));
+    }
+
     return (
       r.div({},
+        Button({ onClick: () => openCreateTagDialog(onTagTypeCreated) }, "Create Tag"),
         r.h2({}, "All tags"),
+        r.pre({}, JSON.stringify(store.tagTypes, undefined, 4)),
+        // Old:
+        r.h2({}, "Old:"),
         r.table({ className: "table" },
           r.thead({},
             r.tr({},
@@ -100,6 +108,7 @@ const AllTagsPanel = createFactory({
             tagTableRows))));
   }
 });
+
 
 
 var TagTableRow = createComponent({
