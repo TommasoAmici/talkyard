@@ -320,14 +320,17 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
                 writtenById = Some(authorId))
 
     val posts = postsOneMaySee
+    COULD_OPTIMIZE // cache tags per post?
+    val tagsByPostId2 = dao.readTx(_.loadTagsByPostId2(posts.map(_.id)))
     val tagsByPostId = dao.readOnlyTransaction(_.loadTagsByPostId(posts.map(_.id)))
 
     val postsJson = posts flatMap { post =>
       val pageStuff = pageStuffById.get(post.pageId) getOrDie "EdE2KW07E"
       val pageMeta = pageStuff.pageMeta
+      val tags2 = tagsByPostId2.getOrElse(post.id, Nil)
       val tags = tagsByPostId.getOrElse(post.id, Set.empty)
       var postJson = dao.jsonMaker.postToJsonOutsidePage(post, pageMeta.pageType,
-            showHidden = true, includeUnapproved = requesterIsStaffOrAuthor, tags)
+            showHidden = true, includeUnapproved = requesterIsStaffOrAuthor, tags2, tags)
 
       pageStuffById.get(post.pageId) map { pageStuff =>
         postJson += "pageId" -> JsString(post.pageId)

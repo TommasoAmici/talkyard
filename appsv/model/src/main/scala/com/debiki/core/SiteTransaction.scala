@@ -262,12 +262,16 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
     newPostNrsByOldNrs: Map[PostNr, PostNr]): Unit
 
   def loadAllTagTypes(): Seq[TagType]
+  def nextTagTypeId(): i32
   def upsertTagType(tagType: TagType): U
   def hardDeleteTagType(tagType: TagType): Bo
   def addTag(tag: Tag): U
   def removeTags(tags: Seq[Tag]): U
   def loadTagsByPatId(patIds: PatId): Seq[Tag]
-  def loadTagsToRenderPage(pageId: PageId): Seq[Tag]
+  def loadTagsForPost2(postId: PostId): Seq[Tag] =
+    loadTagsByPostId2(Seq(postId)).getOrElse(postId, Nil)
+  def loadTagsByPostId2(postIds: Iterable[PostId]): Map[PostId, Seq[Tag]]
+  def loadTagsToRenderSmallPage(pageId: PageId): Seq[Tag]
 
   // -- Old: ------------------
   def loadAllTagsAsSet(): Set[TagLabel]

@@ -48,6 +48,7 @@ interface TagsDiagState {
   post?: Post;
   curTags: Tag[],
   tags: St[], // old
+  canAddTag?: Bo;
 }
 
 
@@ -177,11 +178,30 @@ const TagsDialog = createComponent({
 
   createAndAddTag: function() {
     // [redux] modifying state in place
+    const state: TagsDiagState = this.state;
+    const newTagType: TagType = {
+      id: No.TagTypeId as TagTypeId,
+      dispName: this.refs.newTagInput.getValue(),
+      canTagWhat: ThingType.Posts,
+    };
+    Server.createTagType(newTagType, (tagTypeWitId: TagType) => {
+      const state2: TagsDiagState = this.state;
+      if (this.isGone || state.post.uniqueId !== state2.post.uniqueId) return;
+      const newTag: Tag = {
+        id: No.TagId as TagId,
+        tagTypeId: tagTypeWitId.id,
+        onPostId: state.post.uniqueId,
+      }
+      this.setState({ curTags: [...state.curTags, newTag] });
+      this.refs.newTagInput.clear(); // ?
+    });
+    /*
     let tags = this.state.tags;
     const newTag = this.refs.newTagInput.getValue();
     tags.push(newTag);
     tags = _.uniq(tags);
     this.setState({ tags: tags });
+    */
   },
 
   save: function() {
@@ -196,11 +216,11 @@ const TagsDialog = createComponent({
     let title: St | U;
     let content: RElm | U;
 
-    if (this.state.isLoading)
-      return r.p({}, "Loading...");
-
-    if (!this.state.isOpen) {
+    if (!state.isOpen) {
       // Nothing.
+    }
+    else if (state.isLoading) {
+      content = r.p({}, t.Loading);
     }
     else {
       const post: Post = state.post;
@@ -225,7 +245,7 @@ const TagsDialog = createComponent({
               notRegexTwo: /[!"#$%&'()*+,\/;<=>?@[\]^`{|}\\]/,
               notMessageTwo: "No weird chars like ',&?*' please",
             }),
-            Button({ onClick: this.createAndAddTag, disabled: !this.state.canAddTag },
+            Button({ onClick: this.createAndAddTag, disabled: !state.canAddTag },
               "Create and add tag")));
     }
 
@@ -241,7 +261,7 @@ const TagsDialog = createComponent({
 
 
 function makeTagLabelValues(tags: Tag[], tagTypes: TagType[]) {
-  return tags.map(tag => {
+  return tags.map((tag: Tag) => {
     const tagType = _.find(tagTypes, it => it.id === tag.tagTypeId);
     return {
       label: tagType ? tagType.dispName : `tagtypeid:${tag.tagTypeId}`,
@@ -252,7 +272,7 @@ function makeTagLabelValues(tags: Tag[], tagTypes: TagType[]) {
 
 
 function makeTagTypeLabelValues(tagTypes: TagType[]) {
-  return tagTypes.map(tagType => {
+  return tagTypes.map((tagType: TagType) => {
     // Minus means it's a tag type id, not a tag id, negate_tagtype_id.
     return { label: tagType.dispName, value: -tagType.id };
   });

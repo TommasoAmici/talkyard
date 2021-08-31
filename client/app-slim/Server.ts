@@ -656,6 +656,17 @@ interface GetOptions {
 }
 
 
+function getAndPatchStore(uri: string, onOk?: GetSuccessFn,
+      onErr?: GetErrorFn, opts?: GetOptions): OngoingRequest {
+  return get(uri, function(response) {
+    ReactActions.patchTheStore(response);
+    if (onOk) {
+      onOk(response);
+    }
+  }, onErr, opts);
+}
+
+
 function get(uri: string, successFn: GetSuccessFn, errorFn?: GetErrorFn, options?: GetOptions)
     : OngoingRequest {
 
@@ -2091,7 +2102,7 @@ export function createTagType(newTagType: TagType, onOk: (newWithId: TagType) =>
 
 export function listTagTypes(forWhat: ThingType, prefix: St,
         onOk: (tagTypes: TagType[]) => Vo) {
-  get(`/-/list-tag-types?forWhat=${forWhat}&tagNamePrefix=${prefix}`, onOk);
+  getAndPatchStore(`/-/list-tag-types?forWhat=${forWhat}&tagNamePrefix=${prefix}`, onOk);
 }
 
 
@@ -2102,12 +2113,12 @@ export function loadAllTags(success: (tags: string[]) => void) {
 
 
 export function loadTagsAndStats() {
-  get('/-/load-tags-and-stats', r => ReactActions.patchTheStore(r));
+  getAndPatchStore('/-/load-tags-and-stats');
 }
 
 
 export function loadMyTagNotfLevels() {
-  get('/-/load-my-tag-notf-levels', r => ReactActions.patchTheStore(r));
+  getAndPatchStore('/-/load-my-tag-notf-levels');
 }
 
 

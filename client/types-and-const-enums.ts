@@ -174,6 +174,7 @@ const enum ThingType {
 
 const enum No {
   PageIdSt = '0',
+  TagTypeId = 0,
   TagId = 0,
 }
 

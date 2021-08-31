@@ -33,12 +33,24 @@ trait TagsRdbMixin extends SiteTx {
 
   def loadAllTagTypes(): Seq[TagType] = {
     val query = """
-          select * from tagtypes_t where site_id = ? """
+          select * from tagtypes_t where site_id_c = ? """
     runQueryFindMany(query, List(siteId.asAnyRef), parseTagType)
   }
 
 
+  def nextTagTypeId(): i32 = {
+    val query = """
+          select max(id_c) as max_id from tagtypes_t where site_id_c = ?  """
+    val curMax = runQueryFindExactlyOne(
+          query, List(siteId.asAnyRef), rs => getOptInt32(rs, "max_id"))
+    // Let's start at 1001 so there's room for some built-in tag types,
+    // e.g. My Notes or Staff Notes, or bookmarks.
+    curMax getOrElse 1001
+  }
+
+
   def upsertTagType(tagType: TagType): U = {
+    require(tagType.id >= 1, s"Bad tagtype id: ${tagType.id} [TyE03MFP64]")
     val statement = s"""
           insert into tagtypes_t (
               site_id_c,
@@ -75,17 +87,19 @@ trait TagsRdbMixin extends SiteTx {
 
   def loadTagsByPatId(patId: PatId): Seq[Tag] = {
     val query = """
-          select * from tags_t where site_id = ? and on_pat_id_c = ? """
+          select * from tags_t where site_id_c = ? and on_pat_id_c = ? """
     runQueryFindMany(query, List(siteId.asAnyRef, patId.asAnyRef), parseTag)
   }
 
 
-  def loadTagsToRenderPage(pageId: PageId): Seq[Tag] = {
+  def loadTagsToRenderSmallPage(pageId: PageId): Seq[Tag] = {
+    // Small page, we can load all tags. [large_pages]
+    // But if page large, say, 10 000+ posts, then maybe not.
     // Load tags on posts on the page, and also tags (user badges) on post authors.
     val query = """
           select t.* from tags_t t
               inner join posts3 po
-                  on po.site_id = t.site_id
+                  on po.site_id = t.site_id_c
                   and po.page_id = ?
                   and po.site_id = ?  -- this and...
                   and (po.unique_post_id = t.on_post_id_c  or
@@ -94,6 +108,44 @@ trait TagsRdbMixin extends SiteTx {
           """
     runQueryFindMany(query, List(pageId.asAnyRef, siteId.asAnyRef), parseTag)
   }
+
+
+  def loadTagsByPostId2(postIds: Iterable[PostId]): Map[PostId, Seq[Tag]] = {
+    if (postIds.isEmpty)
+      return Map.empty.withDefaultValue(Nil)
+
+    val query = s"""
+          select * from tags_t
+          where site_id_c = ? and on_post_id_c in (${ makeInListFor(postIds) })
+          order by on_post_id_c
+          """
+    val values = siteId.asAnyRef :: postIds.toList.map(_.asAnyRef)
+
+    val tags = MutArrBuf[Tag]()
+    var currentPostId = NoPostId
+    var tagsByPostId = Map[PostId, Seq[Tag]]().withDefaultValue(Vec.empty)
+
+    runQueryAndForEachRow(query, values, rs => {
+      val postId: PostId = rs.getInt("post_id")
+      //val tag: TagLabel = rs.getString("tag")
+      val tag = parseTag(rs)
+      if (currentPostId == NoPostId || currentPostId == postId) {
+        currentPostId = postId
+        tags += tag
+      }
+      else {
+        tagsByPostId = tagsByPostId.updated(currentPostId, tags.toVector)
+        tags.clear()
+        tags += tag
+        currentPostId = postId
+      }
+    })
+    if (currentPostId != NoPostId) {
+      tagsByPostId = tagsByPostId.updated(currentPostId, tags.toVector)
+    }
+    tagsByPostId
+  }
+
 
 
   def addTag(tag: Tag): U = {

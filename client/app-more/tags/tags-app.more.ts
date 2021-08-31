@@ -65,6 +65,7 @@ const AllTagsPanel = createFactory({
   displayName:  'AllTagsPanel',
 
   componentDidMount: function() {
+    //Server.listTagTypes(ThingType.Pats + ThingType.Posts, '');
     Server.loadTagsAndStats();
     Server.loadMyTagNotfLevels();
   },

@@ -1563,6 +1563,14 @@ function patchTheStore(storePatch: StorePatch) {  // REFACTOR just call directly
     store.tagTypes[newTagType.id] = newTagType;
   }
 
+  if (storePatch.tagTypes) {
+    // Or merge, and dedup?
+    store.tagTypes = [...storePatch.tagTypes];
+  }
+  if (storePatch.tagTypeStats) {
+    // ??
+  }
+
   // Old
   if (storePatch.tagsStuff) {
     // [redux] modifying the store in place, again.

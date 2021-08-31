@@ -76,7 +76,7 @@ begin
     -- Treat all punctuation as the same — replace with a single '_'.
     -- And consider all blanks the same as well: replace with a single ' '.
     return regexp_replace(regexp_replace(regexp_replace(
-            lowercase(trim(txt)),
+            lower(trim(txt)),
             '[^[:print:]]+', '', 'g'),
             '[[:blank:]]+', ' ', 'g'),
             '[[:punct:]]+', '_', 'g');

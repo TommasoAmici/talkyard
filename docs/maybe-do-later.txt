@@ -234,6 +234,10 @@ Search for that tag.
 Improve sub communities, e.g. selecting a category across all sub communities,
 not only the current one.
 
+[large_pages]
+Support pages with 10 000+ replies or 10M replies.
+(Some real life blog posts get 2M comments!)
+
 [performance]
 Use:  ch.qos.Logback.classic.AsyncAppender, measure req/s bef & aftr.
 Nginx: error_log  debug vs warn.

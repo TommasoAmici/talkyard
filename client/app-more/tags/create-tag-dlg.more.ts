@@ -56,7 +56,7 @@ const CreateTagTypeDialog = React.createFactory<{}>(function() {
 
   function serverCreateTagType() {
     const newTagType: TagType = {
-      id: No.TagId,
+      id: No.TagTypeId as TagTypeId,
       dispName: dispName.value,
       canTagWhat: canTagWhat.value,
     };

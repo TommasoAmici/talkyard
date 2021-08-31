@@ -628,7 +628,7 @@ object JsX {   RENAME // to JsonPaSe
     Json.obj(
         "id" -> tagType.id,
         "canTagWhat" -> tagType.canTagWhat,
-        "tagName" -> tagType.dispName)
+        "dispName" -> tagType.dispName)
   }
 
 

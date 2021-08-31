@@ -372,8 +372,9 @@ package object core {
   type TagDefId = Int
   type TagLabelId = Int
   type TagLabel = String
-  val NoTagId: TagLabelId = 0
   // ----------------
+  val NoTagId: TagId = 0
+  val NoTagTypeId: TagTypeId = 0
 
   /** Email identities are strings, all others are numbers but converted to strings. */
   type IdentityId = String

@@ -53,10 +53,11 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
     import req.{dao, theRequester}
     val tagTypeMaybeId: TagType = JsX.parseTagType(req.body, Some(theRequester.id),
           dieOrComplain = ThrowBadReq)
+    throwForbiddenIf(tagTypeMaybeId.id != NoTagTypeId, "TyE603MWEJ5",
+          "Specify tag type id 0")
     val tagType = dao.writeTx { (tx, staleStuff) => {
-      val tagType =
-           if (tagTypeMaybeId.id == 0) tagTypeMaybeId
-           else tagTypeMaybeId.copy(id = 1)(ifBad = ThrowBadReq) // = 1 for now, testing
+      val nextId = tx.nextTagTypeId()
+      val tagType = tagTypeMaybeId.copy(id = nextId)(ifBad = ThrowBadReq)
       tx.upsertTagType(tagType)
       tagType
     }}
@@ -77,12 +78,16 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
-  @deprecated
   def loadTagsAndStats: Action[Unit] = GetAction { request =>
+    val tagTypes = request.dao.getTagTypes(31 + 224, tagNamePrefix = "")
+
     val tagsAndStats = request.dao.loadTagsAndStats()
     val isStaff = request.isStaff
-    OkSafeJson(JsonMaker.makeTagsStuffPatch(Json.obj(
-      "tagsAndStats" -> JsArray(tagsAndStats.map(tagAndStats => {
+    //Json.obj("tagsStuff" -> json), appVersion = appVersion)
+    val oldJson = JsonMaker.makeStorePatch(Json.obj(
+      "tagTypes" -> JsArray(tagTypes map JsX.JsTagType),
+      // Old!:
+      "tagsStuff" -> Json.obj( "tagsAndStats" -> JsArray(tagsAndStats.map(tagAndStats => {
         Json.obj(
           "label" -> tagAndStats.label,
           "numTotal" -> tagAndStats.numTotal,
@@ -90,17 +95,21 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
           // Don't think everyone should know about this:
           "numSubscribers" -> (if (isStaff) tagAndStats.numSubscribers else JsNull),
           "numMuted" -> (if (isStaff) tagAndStats.numMuted else JsNull))
-      }))), globals.applicationVersion))
+      })))), globals.applicationVersion)
+
+      OkSafeJson(oldJson)
   }
 
 
   @deprecated
   def loadMyTagNotfLevels: Action[Unit] = GetAction { request =>
     val notfLevelsByTagLabel = request.dao.loadTagNotfLevels(request.theUserId, request.who)
-    OkSafeJson(JsonMaker.makeTagsStuffPatch(Json.obj(
+    OkSafeJson(JsonMaker.makeStorePatch(
+      // Old json!
+      Json.obj("tagsStuff" -> Json.obj(
       "myTagNotfLevels" -> JsObject(notfLevelsByTagLabel.toSeq.map({ labelAndLevel =>
         labelAndLevel._1 -> JsNumber(labelAndLevel._2.toInt)
-      }))), globals.applicationVersion))
+      })))), globals.applicationVersion))
   }
 
 
