@@ -59,6 +59,7 @@ trait PagesSiteDaoMixin extends SiteTransaction {
           and page_id in (
             select distinct page_id from posts3
             where site_id = ? and created_by_id = ?)
+            -- COULD_OPTIMIZE:  and post not deleted
       """
     runUpdate(statement, List(siteId.asAnyRef, siteId.asAnyRef, userId.asAnyRef))
   }

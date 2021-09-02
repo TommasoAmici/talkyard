@@ -239,8 +239,7 @@ class JsonMaker(dao: SiteDao) {
     }
 
     val tagsByPostId = transaction.loadTagsByPostId(relevantPosts.map(_.id))
-    val tagsByPostId2: Map[PostId, Seq[Tag]] =
-          transaction.loadTagsByPostId2(relevantPosts.map(_.id))
+    val tagsAndBadges = transaction.loadPostTagsAndAuthorBadges(relevantPosts.map(_.id))
 
     var allPostsJson = relevantPosts map { post: Post =>
       numPosts += 1
@@ -251,10 +250,9 @@ class JsonMaker(dao: SiteDao) {
         numPostsChatSection += 1
       else if (!post.isOrigPost && !post.isTitle)
         numPostsRepliesSection += 1
-      val tags2 = tagsByPostId2(post.id)
       val tags = tagsByPostId(post.id)
       post.nr.toString ->
-          postToJsonImpl(post, page, tags2, tags, includeUnapproved = false, showHidden = false)
+          postToJsonImpl(post, page, tagsAndBadges, tags, includeUnapproved = false, showHidden = false)
     }
 
     if (Globals.isDevOrTest) {
@@ -329,6 +327,12 @@ class JsonMaker(dao: SiteDao) {
     val usersById = transaction.loadParticipantsAsMap(userIdsToLoad)
     val usersByIdJson = JsObject(usersById map { idAndUser =>
       idAndUser._1.toString -> JsUser(idAndUser._2)
+    })
+
+    // For now. Later, only those in tagsAndBadges.
+    val tagTypes = transaction.loadAllTagTypes()
+    val tagTypesByIdJson = JsObject(tagTypes map { t =>
+      t.id.toString -> JsTagType(t)
     })
 
     //val pageSettings = dao.loadSinglePageSettings(pageId)
@@ -423,6 +427,7 @@ class JsonMaker(dao: SiteDao) {
       "siteSections" -> makeSiteSectionsJson(),
       "socialLinksHtml" -> JsString(socialLinksHtml),
       "currentPageId" -> page.id,
+      "tagTypes" -> tagTypesByIdJson,  // RENAME to ...ById
       "pagesById" -> Json.obj(page.id -> pageJsonObj))
 
     val reactStoreJsonString = jsonObj.toString()
@@ -551,8 +556,8 @@ class JsonMaker(dao: SiteDao) {
       val page = dao.newPageDao(pageId, transaction)
       val post = page.parts.thePostByNr(postNr)
       val tags = transaction.loadTagsForPost(post.id)
-      val tags2 = transaction.loadTagsForPost2(post.id)
-      val json = postToJsonImpl(post, page, tags2, tags,
+      val tagsAndBadges = transaction.loadPostTagsAndAuthorBadges(Seq(post.id))
+      val json = postToJsonImpl(post, page, tagsAndBadges, tags,
         includeUnapproved = includeUnapproved, showHidden = showHidden)
       (json, page.version)
     }
@@ -566,7 +571,7 @@ class JsonMaker(dao: SiteDao) {
 
   /** Private, so it cannot be called outside a transaction.
     */
-  private def postToJsonImpl(post: Post, page: Page, tags2: Seq[Tag], tags: Set[TagLabel],
+  private def postToJsonImpl(post: Post, page: Page, tagsAndBadges: TagsAndBadges, tags: Set[TagLabel],
         includeUnapproved: Boolean, showHidden: Boolean): JsObject = {
 
     val depth = page.parts.depthOf(post.nr)
@@ -652,18 +657,18 @@ class JsonMaker(dao: SiteDao) {
           dao.context.postRenderer, postRenderSettings, dao.theSite())
 
     postToJsonNoDbAccess(post, showHidden = showHidden, includeUnapproved = includeUnapproved,
-      tags2 = tags2, tags = tags, howRender, renderer)
+          tagsAndBadges, tags = tags, howRender, renderer)
   }
 
 
   def postToJsonOutsidePage(post: Post, pageRole: PageType, showHidden: Boolean, includeUnapproved: Boolean,
-        tags2: Seq[Tag], tags: Set[TagLabel]): JsObject = {
+        tagsAndBadges: TagsAndBadges, tags: Set[TagLabel]): JsObject = {
     val postRenderSettings = dao.makePostRenderSettings(pageRole)
     val renderer = RendererWithSettings(
           dao.context.postRenderer, postRenderSettings, dao.theSite())
 
     postToJsonNoDbAccess(post, showHidden = showHidden, includeUnapproved = includeUnapproved,
-      tags2 = tags2, tags = tags, new HowRenderPostInPage(false, JsNull, false, Nil), renderer)
+          tagsAndBadges, tags = tags, new HowRenderPostInPage(false, JsNull, false, Nil), renderer)
   }
 
 
@@ -1029,19 +1034,18 @@ class JsonMaker(dao: SiteDao) {
       return (JsObject(Nil), JsArray())
 
     val tagsByPostId = transaction.loadTagsByPostId(posts.map(_.id))  // old
-    val tagsByPostId2 = transaction.loadTagsByPostId2(posts.map(_.id))
+    val tagsAndBadges = transaction.loadPostTagsAndAuthorBadges(posts.map(_.id))
     val pageMeta = transaction.loadThePageMeta(pageId)
 
     val postIdsAndJson: Seq[(String, JsValue)] = posts.map { post =>
       val tags = tagsByPostId(post.id)
-      val tags2 = tagsByPostId2(post.id)
       val postRenderSettings = dao.makePostRenderSettings(pageMeta.pageType)
       val renderer = RendererWithSettings(
             dao.context.postRenderer, postRenderSettings, dao.theSite())
 
       post.nr.toString ->
         postToJsonNoDbAccess(post, showHidden = true, includeUnapproved = true,
-          tags2 = tags2, tags = tags, new HowRenderPostInPage(false, JsNull, false,
+              tagsAndBadges, tags = tags, new HowRenderPostInPage(false, JsNull, false,
             // Cannot currently reply to unapproved posts, so no children. [8PA2WFM]
             Nil), renderer)
     }
@@ -1141,9 +1145,9 @@ class JsonMaker(dao: SiteDao) {
   }
 
 
-  def makeStorePatchForPosts(postIds: Set[PostId], showHidden: Boolean, dao: SiteDao)
+  def makeStorePatchForPosts(postIds: Set[PostId], showHidden: Bo, dao: SiteDao)
         : JsObject = {
-    dao.readOnlyTransaction { tx =>
+    dao.readTx { tx =>
       makeStorePatchForPosts(postIds, showHidden, dao.context.postRenderer,
         tx, appVersion = dao.globals.applicationVersion)
     }
@@ -1151,15 +1155,15 @@ class JsonMaker(dao: SiteDao) {
 
 
   def makeStorePatchForPosts(postIds: Set[PostId], showHidden: Bo,
-    postRenderer: PostRenderer, transaction: SiteTx, appVersion: St): JsObject = {
+          postRenderer: PostRenderer, transaction: SiteTx, appVersion: St): JsObject = {
     val posts = transaction.loadPostsByUniqueId(postIds).values
-    val tagsByPostId2 = transaction.loadTagsByPostId2(postIds)
+    val tagsAndBadges = transaction.loadPostTagsAndAuthorBadges(postIds)
     val tagsByPostId = transaction.loadTagsByPostId(postIds)
     val pageIds = posts.map(_.pageId).toSet
     val pageIdVersions = transaction.loadPageMetas(pageIds).map(_.idVersion)
     val authorIds = posts.map(_.createdById).toSet
     val authors = transaction.loadParticipants(authorIds)
-    makeStorePatch3(pageIdVersions, posts, tagsByPostId2, tagsByPostId,
+    makeStorePatch3(pageIdVersions, posts, tagsAndBadges, tagsByPostId,
           authors, appVersion = appVersion)(transaction)
   }
 
@@ -1183,12 +1187,12 @@ class JsonMaker(dao: SiteDao) {
     val post = page.parts.postById(postId) getOrDie "EsE8YKPW2"
     dieIf(post.pageId != pageId, "EdE4FK0Q2W", o"""Wrong page id: $pageId, was post $postId
         just moved to page ${post.pageId} instead? Site: ${transaction.siteId}""")
-    val tags2 = transaction.loadTagsForPost2(post.id)
+    val tagsAndBadges = transaction.loadPostTagsAndAuthorBadges(Seq(post.id))
     val tags = transaction.loadTagsForPost(post.id)
     val author = transaction.loadTheParticipant(post.createdById)
     require(post.createdById == author.id, "EsE4JHKX1")
     val postJson = postToJsonImpl(
-          post, page, tags2, tags, includeUnapproved = true, showHidden = true)
+          post, page, tagsAndBadges, tags, includeUnapproved = true, showHidden = true)
     makeStorePatch(PageIdVersion(post.pageId, page.version), appVersion = appVersion,
           posts = Seq(postJson), users = Seq(JsUser(author)))
   }
@@ -1214,9 +1218,10 @@ class JsonMaker(dao: SiteDao) {
 
   ANNOYING // needs a transaction, because postToJsonImpl needs one. Try to remove
   private def makeStorePatch3(pageIdVersions: Iterable[PageIdVersion], posts: Iterable[Post],
-          tagsByPostId2: Map[PostId, Seq[Tag]], tagsByPostId: Map[PostId, Set[String]],
+          tagsAndBadges: TagsAndBadges, tagsByPostId: Map[PostId, Set[String]],
           users: Iterable[Pat], appVersion: St)(
           tx: SiteTx): JsObject = {
+
     require(posts.isEmpty || users.nonEmpty, "Posts but no authors [EsE4YK7W2]")
     val pageVersionsByPageIdJson =
       JsObject(pageIdVersions.toSeq.map(p => p.pageId -> JsNumber(p.version)))
@@ -1227,7 +1232,7 @@ class JsonMaker(dao: SiteDao) {
         val posts = pageIdPosts._2
         val page = dao.newPageDao(pageId, tx)
         val postsJson = posts map { p =>
-          postToJsonImpl(p, page, tagsByPostId2.getOrElse(p.id, Nil),
+          postToJsonImpl(p, page, tagsAndBadges,
                 tagsByPostId.getOrElse(p.id, Set.empty),
                 includeUnapproved = false, showHidden = false)
         }
@@ -1803,8 +1808,8 @@ object JsonMaker {
   }
 
 
-  private def postToJsonNoDbAccess(post: Post, showHidden: Boolean, includeUnapproved: Boolean,
-    tags2: Seq[Tag],  // new
+  private def postToJsonNoDbAccess(post: Post, showHidden: Bo, includeUnapproved: Bo,
+    tagsAndBadges: TagsAndBadges,
     tags: Set[TagLabel],  // old
     howRender: HowRenderPostInPage,
     renderer: RendererWithSettings): JsObject = {
@@ -1840,6 +1845,8 @@ object JsonMaker {
     val lastApprovedEditAtNoNinja =
       if (post.approvedRevisionNr.contains(FirstRevisionNr)) None
       else post.lastApprovedEditAt
+
+    val tags2: Seq[Tag] = tagsAndBadges.tags(post.id)
 
     var fields = Vector(
       "uniqueId" -> JsNumber(post.id),

@@ -2096,7 +2096,7 @@ export function editPostSettings(postId: PostId, settings: PostSettings) {
 
 
 export function createTagType(newTagType: TagType, onOk: (newWithId: TagType) => Vo) {
-  postAndPatchStore(`/-/create-tag-type`, onOk, newTagType);
+  postAndPatchStore(`/-/create-tag-type`, r => onOk(r.newTagType), newTagType);
 }
 
 
@@ -2112,8 +2112,8 @@ export function loadAllTags(success: (tags: string[]) => void) {
 }
 
 
-export function loadTagsAndStats() {
-  getAndPatchStore('/-/load-tags-and-stats');
+export function loadTagsAndStats(onOk?: () => Vo) {
+  getAndPatchStore('/-/load-tags-and-stats', onOk);
 }
 
 
@@ -2122,14 +2122,13 @@ export function loadMyTagNotfLevels() {
 }
 
 
-export function addRemovePostTags(postId: PostId, tags: string[], success: () => void) {
+export function addRemoveTags(ps: { add: Tag[], remove: Tag[] }, onOk: () => Vo) {
   postJsonSuccess('/-/add-remove-tags', (response) => {
-    ReactActions.patchTheStore(response);
-    success();
+    ReactActions.patchTheStore(response); //?
+    onOk();
   }, {
-    pageId: getPageId(),
-    postId: postId,
-    tags: tags
+    tagsToAdd: ps.add,
+    tagsToRemove: ps.remove,
   });
 }
 

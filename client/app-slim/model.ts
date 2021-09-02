@@ -761,6 +761,14 @@ interface TagType {
 }
 
 
+interface TagTypeStats {
+  tagTypeId: TagTypeId;
+  numTotal: Nr;
+  numPostTags: Nr;
+  numPatBadges: Nr;
+}
+
+
 interface Tag {
   id: TagId;
   tagTypeId: TagTypeId;
@@ -1105,7 +1113,8 @@ interface Store extends Origins, DiscStore, PartialEditorStoreState {
 
   debugStartPageId: string;
 
-  tagTypes: { [tagTypeId: number]: TagType };
+  tagTypes?: { [tagTypeId: number]: TagType };
+  tagTypeStatsById?: { [tagTypeId: string]: TagTypeStats };
 
   // old
   tagsStuff?: TagsStuff;
@@ -1289,6 +1298,7 @@ interface Pat {   // Guest or Member, and Member = group or user
   avatarSmallHashPath?: string;
   isMissing?: boolean;
   isGone?: boolean;
+  badges?: Tag[];  // ?? badges that should be displayed almost always
 }
 
 type PpsById = { [ppId: number]: Participant };  // RENAME to PatsById
@@ -1670,8 +1680,8 @@ interface StorePatch extends EditorStorePatch {
 
   // If pat created a new tag type.
   newTagType?: TagType;
-  tagTypes?: TagType[];
-  tagTypeStats?;
+  allTagTypes?: TagType[];
+  allTagTypeStatsById?: { [tagTypeId: string]: TagTypeStats };
 
   // Some pages get created lazily, namely embedded comments pages. They get
   // created when someone posts the first comment, or posts the first Like vote,

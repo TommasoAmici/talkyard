@@ -55,13 +55,17 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
           dieOrComplain = ThrowBadReq)
     throwForbiddenIf(tagTypeMaybeId.id != NoTagTypeId, "TyE603MWEJ5",
           "Specify tag type id 0")
-    val tagType = dao.writeTx { (tx, staleStuff) => {
+    debiki.dao.TagsDao.findTagLabelProblem(tagTypeMaybeId.dispName) foreach { errMsg =>
+      throwBadRequest(errMsg.code, errMsg.message)
+    }
+    val tagType = dao.writeTx { (tx, _) => {
       val nextId = tx.nextTagTypeId()
       val tagType = tagTypeMaybeId.copy(id = nextId)(ifBad = ThrowBadReq)
       tx.upsertTagType(tagType)
       tagType
     }}
-    OkSafeApiJson(JsX.JsTagType(tagType))
+    OkSafeApiJson(Json.obj(
+      "newTagType" -> JsX.JsTagType(tagType)))
   }
 
 
@@ -79,14 +83,21 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
 
   def loadTagsAndStats: Action[Unit] = GetAction { request =>
-    val tagTypes = request.dao.getTagTypes(31 + 224, tagNamePrefix = "")
+    import request.dao
+    val (tagTypes, tagStats) = dao.readTx { tx =>
+      (tx.loadAllTagTypes(),
+          tx.loadTagTypeStats())
+    }
 
+    /*
     val tagsAndStats = request.dao.loadTagsAndStats()
     val isStaff = request.isStaff
-    //Json.obj("tagsStuff" -> json), appVersion = appVersion)
+     */
     val oldJson = JsonMaker.makeStorePatch(Json.obj(
-      "tagTypes" -> JsArray(tagTypes map JsX.JsTagType),
-      // Old!:
+      "allTagTypes" -> JsArray(tagTypes map JsX.JsTagType),
+      "allTagTypeStatsById" ->
+            JsObject(tagStats.map(s => s.toString -> JsX.JsTagStats(s))),
+      /* Old!:
       "tagsStuff" -> Json.obj( "tagsAndStats" -> JsArray(tagsAndStats.map(tagAndStats => {
         Json.obj(
           "label" -> tagAndStats.label,
@@ -95,7 +106,8 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
           // Don't think everyone should know about this:
           "numSubscribers" -> (if (isStaff) tagAndStats.numSubscribers else JsNull),
           "numMuted" -> (if (isStaff) tagAndStats.numMuted else JsNull))
-      })))), globals.applicationVersion)
+       })))*/
+      ), globals.applicationVersion)
 
       OkSafeJson(oldJson)
   }
@@ -126,13 +138,27 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
-  @deprecated
   def addRemoveTags: Action[JsValue] = PostJsonAction(RateLimits.EditPost, maxBytes = 5000) { request =>
+    import request.{body, dao}
+    val toAddJsVals: Seq[JsValue] = debiki.JsonUtils.parseJsArray(body, "tagsToAdd")
+    val toAdd = toAddJsVals.map(v => JsX.parseTag(v, ifBad = ThrowBadReq))
+    val toRemoveJsVals = debiki.JsonUtils.parseJsArray(body, "tagsToRemove")
+    val toRemove = toRemoveJsVals.map(v => JsX.parseTag(v, ifBad = ThrowBadReq))
+    val affectedPostIds = dao.addRemoveTagsIfAuth(
+          toAdd = toAdd, toRemove = toRemove, request.who)
+
+    val storePatch = dao.jsonMaker.makeStorePatchForPosts(
+          postIds = affectedPostIds, showHidden = true, dao)
+
+    OkSafeApiJson(storePatch)
+
+    /*
     val pageId = (request.body \ "pageId").as[PageId]
     val postId = (request.body \ "postId").as[PostId]  // yes id not nr
     val tags = (request.body \ "tags").as[Set[TagLabel]]
     val patch = request.dao.addRemoveTagsIfAuth(pageId, postId, tags, request.who)
     OkSafeJson(patch) // or skip? or somehow include tags *only*? [5GKU0234]
+     */
   }
 }
 

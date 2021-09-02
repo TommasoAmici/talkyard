@@ -1,4 +1,9 @@
 
+create domain page_id_st_d text;
+comment on domain page_id_st_d is
+    'Currently, page ids are strings — later, those will become aliases, '
+    'and there''l be numeric ids instead?';
+
 create domain color_d as text;
 alter domain color_d add constraint color_d_c_hex_or_rgb_or_hsl check (
     value ~ '^#[a-f0-9]{3}([a-f0-9]{3})?$');
@@ -68,6 +73,24 @@ create domain thing_types_d i16_d;
 alter domain thing_types_d add constraint thing_types_d_c_in check (
     value in (31, 224));
 
+create domain tag_name_120_d text_oneline_120_d;
+alter domain tag_name_120_d add constraint tag_name_120_d_c_chars check (is_ok_tag_chars(value));
+create domain tag_name_60_d text_oneline_60_d;
+alter domain tag_name_60_d add constraint tag_name_60_d_c_chars check (is_ok_tag_chars(value));
+create domain tag_name_15_d text_oneline_15_d;
+alter domain tag_name_15_d add constraint tag_name_15_d_c_chars check (is_ok_tag_chars(value));
+
+comment on domain tag_name_15_d is
+    'Like text_oneline_15_d, but allows only alnum, space and some punctuation chars.';
+
+
+create or replace function is_ok_tag_chars(txt text) returns boolean
+language plpgsql as $_$
+begin
+    -- No whitespace, commas, ';' etcetera. Sync with Scala [7JES4R3-2]
+    return txt ~ '^[[:alnum:] _.:/-]+$';
+end;
+$_$;
 
 
 create or replace function index_friendly(txt text) returns text
@@ -88,15 +111,15 @@ $_$ immutable;
 
 create table tagtypes_t (
   site_id_c  int,
-  id_c  i32_gez_d,
+  id_c  i32_gz_d,
   can_tag_what_c  thing_types_d not null,
   scoped_to_pat_id_c  int,
   is_personal bool,
   url_slug_c  url_slug_60_d,
-  disp_name_c  text_oneline_60_d not null,
-  long_name_c  text_oneline_120_d,
-  abbr_name_c  text_oneline_15_d,
-  descr_page_id_c  text,
+  disp_name_c  tag_name_60_d not null,
+  long_name_c  tag_name_120_d,
+  abbr_name_c  tag_name_15_d,
+  descr_page_id_c  page_id_st_d,
   descr_url_c  http_url_d,
   text_color_c  color_d,
   handle_color_c  color_d,
@@ -137,7 +160,10 @@ create table tagtypes_t (
 
   -- fk ix: tagtypes_i_mergedby
   constraint tagtypes_mergedby_r_pats foreign key (site_id_c, merged_by_id_c)
-      references users3 (site_id, user_id) deferrable
+      references users3 (site_id, user_id) deferrable,
+
+  -- For now, to catch bugs, see runQueryFindNextFreeInt32(), starts at 1001.
+  constraint tagtypes_c_id_gt1000 check (id_c > 1000)
 );
 
 
@@ -164,7 +190,7 @@ create index tagtypes_i_mergedby on tagtypes_t (site_id_c, merged_by_id_c);
 
 create table tags_t (
   site_id_c int,
-  id_c i32_gez_d,
+  id_c i32_gz_d,
   tagtype_id_c int,
   parent_tag_id_c int,
   on_pat_id_c int,
@@ -211,7 +237,10 @@ create table tags_t (
 
   -- fk ix: tags_i_onpageid
   constraint tags_r_posts foreign key (site_id_c, on_post_id_c)
-      references posts3 (site_id, unique_post_id) deferrable
+      references posts3 (site_id, unique_post_id) deferrable,
+
+  -- For now, see runQueryFindNextFreeInt32().
+  constraint tags_c_id_gt1000 check (id_c > 1000)
 );
 
 

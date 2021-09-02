@@ -849,6 +849,14 @@ package object core {
     reactStoreJsonHash = "wrong")
 
 
+  case class TagTypeStats(
+    tagTypeId: TagTypeId,
+    numTotal: Int,
+    numPostTags: Int,
+    numPatBadges: Int)
+
+
+  @deprecated
   case class TagAndStats(
     label: TagLabel,
     numTotal: Int,

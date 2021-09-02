@@ -100,6 +100,16 @@ package object dao {
       r
     }
 
+    def addPagesWithPostsBy(patIds: Set[PatId], memCacheOnly: Bo = false): U = {
+      // This not yet implemented — would need to find all posts by the pats,
+      // and pages with those posts, and remove from the db cache, Redis and mem cache.
+      // And, would need a SiteTx or SiteDao.
+      // For now, instead:
+      if (patIds.nonEmpty) {
+        addAllPages()
+      }
+    }
+
     def addAllPages(): U =
       _allPagesStale = true
 

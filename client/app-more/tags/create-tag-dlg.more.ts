@@ -44,7 +44,8 @@ export function openCreateTagDialog(onCreated: NewTagTypeCallback) {
 
 
 const CreateTagTypeDialog = React.createFactory<{}>(function() {
-  const [onCreatedCallback, setOnCreatedCallback] = React.useState<[NewTagTypeCallback]>(null);
+  const [onCreatedCallback, setOnCreatedCallback] =
+          React.useState<[NewTagTypeCallback]>(null);
   const [dispName, setDispName] = React.useState<ValueOk<St>>({});
   const [canTagWhat, setCanTagWhat] = React.useState<ValueOk<ThingType>>({
     value: ThingType.Pats,
@@ -62,8 +63,7 @@ const CreateTagTypeDialog = React.createFactory<{}>(function() {
     };
     Server.createTagType(newTagType, (newTagTypeWithId: TagType) => {
       onCreatedCallback[0](newTagTypeWithId);
-      // But how does the dialog ever get closed? There's no
-      // setOnCreatedCallback(null) here?
+      setOnCreatedCallback(null);
     });
   }
 

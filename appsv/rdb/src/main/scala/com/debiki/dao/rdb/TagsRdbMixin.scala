@@ -22,6 +22,7 @@ import com.debiki.core.Prelude._
 import Rdb._
 import RdbUtil._
 import java.sql.{ResultSet => j_ResultSet}
+import collection.{mutable => mut}
 
 
 
@@ -31,6 +32,20 @@ trait TagsRdbMixin extends SiteTx {
   self: RdbSiteTransaction =>
 
 
+  def nextTagTypeId(): i32 = {
+    runQueryFindNextFreeInt32(tableName = "tagtypes_t", columnName = "id_c")
+    /*
+    val query = """
+          select max(id_c) as max_id from tagtypes_t where site_id_c = ?  """
+    val curMax = runQueryFindExactlyOne(
+          query, List(siteId.asAnyRef), rs => getOptInt32(rs, "max_id"))
+    // Let's start at 1001 so there's room for some built-in tag types,
+    // e.g. My Notes or Staff Notes, or bookmarks.
+    (curMax getOrElse 1000) + 1
+     */
+  }
+
+
   def loadAllTagTypes(): Seq[TagType] = {
     val query = """
           select * from tagtypes_t where site_id_c = ? """
@@ -38,14 +53,26 @@ trait TagsRdbMixin extends SiteTx {
   }
 
 
-  def nextTagTypeId(): i32 = {
+  def loadTagTypeStats(): Seq[TagTypeStats] = {
     val query = """
-          select max(id_c) as max_id from tagtypes_t where site_id_c = ?  """
-    val curMax = runQueryFindExactlyOne(
-          query, List(siteId.asAnyRef), rs => getOptInt32(rs, "max_id"))
-    // Let's start at 1001 so there's room for some built-in tag types,
-    // e.g. My Notes or Staff Notes, or bookmarks.
-    curMax getOrElse 1001
+          select
+            tagtype_id_c,
+            count(*) num_total,
+            sum(one_unless_null(on_post_id_c)) num_post_tags,
+            sum(one_unless_null(on_pat_id_c))  num_pat_badges
+          from tags_t
+          where site_id_c = ?
+          group by tagtype_id_c
+          """
+    runQueryFindMany(query, List(siteId.asAnyRef), rs => {
+      TagTypeStats(
+            tagTypeId = getInt32(rs, "tagtype_id_c"),
+            numTotal = getInt32(rs, "num_total"),
+            // How can any of these be null, in spite of one_unless_null() above,
+            // which always returns 0 or 1? Anyway, let's just use getOpt... getOrElse 0.
+            numPostTags = getOptInt32(rs, "num_post_tags") getOrElse 0,
+            numPatBadges = getOptInt32(rs, "num_pat_badges") getOrElse 0)
+    })
   }
 
 
@@ -110,42 +137,107 @@ trait TagsRdbMixin extends SiteTx {
   }
 
 
-  def loadTagsByPostId2(postIds: Iterable[PostId]): Map[PostId, Seq[Tag]] = {
+  override def loadPostTagsAndAuthorBadges(postIds: Iterable[PostId]): TagsAndBadges = {
     if (postIds.isEmpty)
-      return Map.empty.withDefaultValue(Nil)
+      return TagsAndBadges(
+            Map.empty.withDefaultValue(Nil),
+            Map.empty.withDefaultValue(Nil))
 
     val query = s"""
+          -- Post tags
           select * from tags_t
-          where site_id_c = ? and on_post_id_c in (${ makeInListFor(postIds) })
-          order by on_post_id_c
+          where site_id_c = ?
+            and on_post_id_c in (${ makeInListFor(postIds) })
+          union
+          -- Post author user badges
+          select t.*
+          from tags_t t inner join posts3 po
+            on t.site_id_c = po.site_id
+            and t.on_pat_id_c = po.created_by_id
+            and po.site_id = ?
+            and po.unique_post_id in (${ makeInListFor(postIds) })
+          -- order by on_post_id_c
+          -- -- Place post tags first, with on_pat_id_c = -1,
+          -- -- then all user badges, with on_post_id_c = -1.
+          -- order by
+          --   coalesce(on_pat_id_c, -1),
+          --   coalesce(on_post_id_c, -1)
           """
-    val values = siteId.asAnyRef :: postIds.toList.map(_.asAnyRef)
+    var values = siteId.asAnyRef :: postIds.toList.map(_.asAnyRef)
+    values = values:::values
 
     val tags = MutArrBuf[Tag]()
-    var currentPostId = NoPostId
-    var tagsByPostId = Map[PostId, Seq[Tag]]().withDefaultValue(Vec.empty)
+    //var curPostId = NoPostId
+    var curPatId = NoUserId
+    val tagsByPostId = mut.Map[PostId, MutArrBuf[Tag]]()
+    val tagsByPatId = mut.Map[PatId, MutArrBuf[Tag]]()
+
 
     runQueryAndForEachRow(query, values, rs => {
-      val postId: PostId = rs.getInt("post_id")
-      //val tag: TagLabel = rs.getString("tag")
       val tag = parseTag(rs)
-      if (currentPostId == NoPostId || currentPostId == postId) {
-        currentPostId = postId
-        tags += tag
+      if (tag.onPostId.isDefined) {
+        val postId: PostId = tag.onPostId getOrDie "TyE4MFE6780"
+        val anyTags: Opt[MutArrBuf[Tag]] = tagsByPostId.get(postId)
+        val tags = anyTags getOrElse MutArrBuf[Tag]()
+        tags.append(tag)
+        if (anyTags.isEmpty) {
+          tagsByPostId(postId) = tags
+        }
+      }
+      else if (tag.onPatId.isDefined) {
+        val patId = tag.onPatId getOrDie "TyEJ503MRE"
+        val anyTags: Opt[MutArrBuf[Tag]] = tagsByPatId.get(patId)
+        val tags = anyTags getOrElse MutArrBuf[Tag]()
+        tags.append(tag)
+        if (anyTags.isEmpty) {
+          tagsByPatId(patId) = tags
+        }
       }
       else {
-        tagsByPostId = tagsByPostId.updated(currentPostId, tags.toVector)
-        tags.clear()
-        tags += tag
-        currentPostId = postId
+        die("TyE0WME573")
       }
+
+      /*
+      if (tag.onPostId.isDefined) {
+        val postId = tag.onPostId.get
+        if (curPostId == NoPostId || curPostId == postId) {
+          curPostId = postId
+          tags += tag
+        }
+        else {
+          tagsByPostId = tagsByPostId.updated(curPostId, tags.toVector)
+          tags.clear()
+          tags += tag
+          curPostId = postId
+        }
+      }
+      else {
+        val patId = tag.onPatId getOrDie "TyEJ503MRE"
+        if (curPatId == NoUserId || curPatId == patId) {
+          curPatId = patId
+          tags += tag
+        }
+        else {
+          tagsByPatId = tagsByPatId.updated(curPatId, tags.toVector)
+          tags.clear()
+          tags += tag
+          curPatId = patId
+        }
+      }*/
     })
-    if (currentPostId != NoPostId) {
-      tagsByPostId = tagsByPostId.updated(currentPostId, tags.toVector)
-    }
-    tagsByPostId
+    /*
+    if (curPostId != NoPostId) {
+      tagsByPostId = tagsByPostId.updated(curPostId, tags.toVector)
+    }*/
+    TagsAndBadges(
+          tags = tagsByPostId.withDefaultValue(MutArrBuf[Tag]()),
+          badges = tagsByPatId.withDefaultValue(MutArrBuf[Tag]()))
   }
 
+
+  def nextTagId(): i32 = {
+    runQueryFindNextFreeInt32(tableName = "tags_t", columnName = "id_c")
+  }
 
 
   def addTag(tag: Tag): U = {
@@ -173,7 +265,7 @@ trait TagsRdbMixin extends SiteTx {
     if (tags.isEmpty) return ()
     val statement = s"""
           delete from tags_t where site_id_c = ? and id_c in (${makeInListFor(tags)}) """
-    val values = List(siteId.asAnyRef) :: tags.map(_.id.asAnyRef).toList
+    val values = siteId.asAnyRef :: tags.map(_.id.asAnyRef).toList
     runUpdate(statement, values)
   }
 

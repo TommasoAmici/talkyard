@@ -165,6 +165,18 @@ class RdbSiteTransaction(var siteId: SiteId, val daoFactory: RdbDaoFactory, val 
   }
 
 
+  def runQueryFindNextFreeInt32(tableName: St, columnName: St): i32 = {
+    val query = s"""
+          select max($columnName) as any_max
+          from $tableName
+          where site_id_c = ?  """
+    val anyMax = runQueryFindExactlyOne(
+          query, List(siteId.asAnyRef), rs => getOptInt32(rs, "any_max"))
+    // Let's start at 1001 so there's room for some built-in whatever-is-in-the-table.
+    (anyMax getOrElse 1000) + 1
+  }
+
+
   // COULD move to new superclass?
   def runQuery[R](query: String, values: List[AnyRef], resultSetHandler: js.ResultSet => R): R = {
     db.query(query, values, resultSetHandler)(theOneAndOnlyConnection)

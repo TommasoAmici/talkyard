@@ -20,6 +20,7 @@ package com.debiki.core
 import java.net.InetAddress
 import java.{util => ju}
 import scala.collection.immutable
+import scala.{collection => col}
 import Prelude._
 
 
@@ -184,6 +185,7 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
 
   // Returns recently active pages first.
   def loadPagePostNrsByPostIds(postIds: Iterable[PostId]): Map[PostId, PagePostNr]
+  def loadPageIdsWithPostsBy(patIds: Set[PatId]): Set[PageId]
   def loadPageIdsUserIsMemberOf(userId: UserId, onlyPageRoles: Set[PageType]): immutable.Seq[PageId]
   def loadReadProgress(userId: UserId, pageId: PageId): Option[PageReadingProgress]
   def loadReadProgressAndIfHasSummaryEmailed(userId: UserId, pageId: PageId)
@@ -261,16 +263,21 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def movePostsReadStats(oldPageId: PageId, newPageId: PageId,
     newPostNrsByOldNrs: Map[PostNr, PostNr]): Unit
 
-  def loadAllTagTypes(): Seq[TagType]
+  // ----- Tag types
   def nextTagTypeId(): i32
+  def loadAllTagTypes(): Seq[TagType]
+  def loadTagTypeStats(): Seq[TagTypeStats]
   def upsertTagType(tagType: TagType): U
   def hardDeleteTagType(tagType: TagType): Bo
+
+  // ----- Tags
+  def nextTagId(): i32
   def addTag(tag: Tag): U
   def removeTags(tags: Seq[Tag]): U
   def loadTagsByPatId(patIds: PatId): Seq[Tag]
-  def loadTagsForPost2(postId: PostId): Seq[Tag] =
-    loadTagsByPostId2(Seq(postId)).getOrElse(postId, Nil)
-  def loadTagsByPostId2(postIds: Iterable[PostId]): Map[PostId, Seq[Tag]]
+  def loadTagsForPost2(postId: PostId): Any = ??? //TagsAndBadgesSinglePosts =
+  //  loadTagsForPostsAndAuthors(Seq(postId)).getOrElse(postId, Nil)
+  def loadPostTagsAndAuthorBadges(postIds: Iterable[PostId]): TagsAndBadges
   def loadTagsToRenderSmallPage(pageId: PageId): Seq[Tag]
 
   // -- Old: ------------------
@@ -755,3 +762,11 @@ case class PostNotFoundException(pageId: PageId, postNr: PostNr) extends QuickMe
 case class PostNotFoundByIdException(postId: PostId) extends QuickMessageException(
   s"Post not found by id: $postId")
 
+
+case class TagsAndBadgesSinglePosts(
+  tags: Seq[Tag],
+  badges: Seq[Tag])
+
+case class TagsAndBadges(
+  tags: col.Map[PostId, col.Seq[Tag]],
+  badges: col.Map[PatId, col.Seq[Tag]])

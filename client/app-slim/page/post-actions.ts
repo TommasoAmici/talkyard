@@ -436,12 +436,24 @@ export const PostActions = createComponent({
     }
 
     let tagList;
+    if (post.tags2 && post.tags2.length) {
+      const tags = post.tags2.map((tag: Tag) => {
+        const tagType = store.tagTypes?.[tag.tagTypeId];
+        return (
+            r.li({ key: tag.id }, r.a({ className: 'esTg' },
+              tagType?.dispName ||
+                  // Would be a bug.
+                  `Tag id: ${tag.id}, type: ${tag.tagTypeId}`)));
+      });
+      tagList = r.ul({ className: 'esPA_Ts' }, tags);
+    }
+    /* old
     if (post.tags && post.tags.length) {
       const tags = post.tags.map((label) => {
         return r.li({ key: label }, r.a({ className: 'esTg' }, label));
       });
       tagList = r.ul({ className: 'esPA_Ts' }, tags);
-    }
+    } */
 
     const adminLink = !me.isAdmin || !isEmbeddedOrigPost ? null : rFragment({},
       r.a({ className: 'dw-a dw-a-other-topics icon-link-ext', href: linkToEmbeddedDiscussions(),

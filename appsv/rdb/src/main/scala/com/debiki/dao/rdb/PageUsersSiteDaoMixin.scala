@@ -154,6 +154,9 @@ trait PageUsersSiteDaoMixin extends SiteTransaction {
     })
   }
 
+  override def loadPageIdsWithPostsBy(patIds: Set[PatId]): Set[PageId] = {
+    ???
+  }
 
   def loadReadProgress(userId: UserId, pageId: PageId): Option[PageReadingProgress] = {
     loadReadProgressAndIfHasSummaryEmailed(userId, pageId = pageId)._1

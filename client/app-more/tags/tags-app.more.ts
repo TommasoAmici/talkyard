@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017 Kaj Magnus Lindberg
+ * Copyright (c) 2016, 2017, 2021 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -60,32 +60,51 @@ const TagsAppComponent = createReactClass(<any> {
 });
 
 
+interface TagsPanelState {
+  flashTagTypeId?: TagTypeId;
+  doneLoading?: Bo;
+}
+
 
 const AllTagsPanel = createFactory({
   displayName:  'AllTagsPanel',
 
+  getInitialState: function() {
+    return {};
+  },
+
   componentDidMount: function() {
     //Server.listTagTypes(ThingType.Pats + ThingType.Posts, '');
-    Server.loadTagsAndStats();
+    Server.loadTagsAndStats(() => this.setState({ doneLoading: true }));
     Server.loadMyTagNotfLevels();
   },
 
   render: function() {
+    const state: TagsPanelState = this.state;
     var store: Store = this.props.store;
     var me: Myself = store.me;
+
+    if (!state.doneLoading)
+      return r.p({}, "Loading ...");
+
+    const tagTypes: TagType[] = _.values(store.tagTypes) || [];
+    /*
     var tagsStuff: TagsStuff = store.tagsStuff || {};
     var tagsAndStats = tagsStuff.tagsAndStats;
-    var myTagNotfLevels = tagsStuff.myTagNotfLevels;
-    if (!tagsAndStats)
-      return r.p({}, "Loading ...");
+    */
+    var myTagNotfLevels = []; // !tagsStuff.myTagNotfLevels;
 
     var subscribersColumn = isStaff(me) ? r.th({}, "Subscribers") : null;
     var mutedColumn = isStaff(me) ? r.th({}, "Muted") : null;
 
-    var tagTableRows = tagsAndStats.map(tagAndStats =>
-        TagTableRow({ store: store, tagAndStats: tagAndStats, myTagNotfLevels: myTagNotfLevels }));
+    var tagTableRows = tagTypes.map(tagType =>   //tagsAndStats.   tagAndStats
+        TagTableRow({ store: store, tagType,
+            myTagNotfLevels: myTagNotfLevels,
+            flashTagTypeId: state.flashTagTypeId }));
 
-    function onTagTypeCreated(newTagType: TagType) {
+    const onTagTypeCreated = (newTagType: TagType) => {
+      const newState = { flashTagTypeId: newTagType.id };
+      this.setState(newState);
       console.log(`Just created: ` + JSON.stringify(newTagType, undefined, 4));
     }
 
@@ -93,18 +112,18 @@ const AllTagsPanel = createFactory({
       r.div({},
         Button({ onClick: () => openCreateTagDialog(onTagTypeCreated) }, "Create Tag"),
         r.h2({}, "All tags"),
-        r.pre({}, JSON.stringify(store.tagTypes, undefined, 4)),
-        // Old:
-        r.h2({}, "Old:"),
+        r.pre({}, JSON.stringify(tagTypes, undefined, 4)),
         r.table({ className: "table" },
           r.thead({},
             r.tr({},
-              r.th({}, "Name"),
-              r.th({}, "Num usages"),
-              r.th({}, "Num pages"),
+              r.th({}, "Tag or User Badge name"),
+              r.th({}, "Total usages"),
+              r.th({}, "Tagged posts"),
+              r.th({}, "User badges"),
+              /*
               subscribersColumn,
               mutedColumn,
-              r.th({}, "Notifications to you"))),
+              r.th({}, "Notifications to you") */)),
           r.tbody({},
             tagTableRows))));
   }
@@ -112,23 +131,39 @@ const AllTagsPanel = createFactory({
 
 
 
-var TagTableRow = createComponent({
-  render: function() {
-    var store: Store = this.props.store;
+const noStats: TagTypeStats = {
+  tagTypeId: No.TagTypeId as TagTypeId,
+  numTotal: 0,
+  numPostTags: 0,
+  numPatBadges: 0,
+}
+
+
+function TagTableRow(props: { store: Store, tagType: TagType, myTagNotfLevels,
+          flashTagTypeId?: TagTypeId }) {
+    var store: Store = props.store;
     var me: Myself = store.me;
-    var tagAndStats: TagAndStats = this.props.tagAndStats;
-    var myTagNotfLevels = this.props.myTagNotfLevels;
-    var tagNotfLevel = (myTagNotfLevels || {})[tagAndStats.label] || PageNotfLevel.Normal;
-    var subscribersColumn = isStaff(me) ? r.td({}, tagAndStats.numSubscribers) : null;
-    var mutedColumn = isStaff(me) ? r.td({}, tagAndStats.numMuted) : null;
+    //var tagAndStats: TagAndStats = props.tagType;
+    const tagType: TagType = props.tagType;
+    const stats: TagTypeStats = store.tagTypeStatsById[tagType.id] || noStats;
+    var myTagNotfLevels = props.myTagNotfLevels;
+    // id not label!
+    //var tagNotfLevel = (myTagNotfLevels || {})[tagType.id] || PageNotfLevel.Normal;
+    var subscribersColumn = null; // isStaff(me) ? r.td({}, tagAndStats.numSubscribers) : null;
+    var mutedColumn = null; // isStaff(me) ? r.td({}, tagAndStats.numMuted) : null;
+    const className = props.flashTagTypeId === tagType.id ? 'n_Flash' : '';
     return (
-      r.tr({},
+      r.tr({ className },
         r.td({},
-          r.a({ className: 'esTg' }, tagAndStats.label)),
+          r.a({ className: 'esTg' }, tagType.dispName)),
         r.td({},
-          tagAndStats.numTotal),
+          stats.numTotal),
         r.td({},
-          tagAndStats.numPages),
+          stats.numPostTags),
+        r.td({},
+          stats.numPatBadges),
+      ));
+        /*
         subscribersColumn,
         mutedColumn,
         r.td({},
@@ -137,8 +172,7 @@ var TagTableRow = createComponent({
           notification.NotfLe  velButton_oldForTags({ subject: { tagLabel: tagAndStats.label },
               notfLevel: tagNotfLevel }))));
               */
-  }
-});
+}
 
 //------------------------------------------------------------------------------
    }

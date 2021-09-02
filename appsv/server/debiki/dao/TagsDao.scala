@@ -49,18 +49,21 @@ object TagsDao {
   // See:
   //  - https://stackoverflow.com/q/6279694/694469
   //  - https://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html
-  val BadTagLabelCharsRegex: Regex = """.*[\p{Punct}&&[^_~:.-]].*""".r  // sync with SQL [7JES4R3]
+  // val BadTagLabelCharsRegex: Regex = """.*[\p{Punct}&&[^/_~:.-]].*""".r  // sync with SQL [7JES4R3]
+  val BadTagNameCharsRegex: Regex = """.*[^\p{Alnum} _.:/-].*""".r // sync with SQL [7JES4R3-2]
 
   def findTagLabelProblem(tagLabel: TagLabel): Option[ErrorMessageCode] = {
     if (tagLabel.length < MinTagLength)
       return Some(ErrorMessageCode(s"Tag label too short: '$tagLabel'", "TyEMINTAGLEN_"))
     if (tagLabel.length > MaxTagLength)
       return Some(ErrorMessageCode(s"Tag label too long: '$tagLabel'", "TyEMAXTAGLEN_"))
+    /*
     if (tagLabel.matches(WhitespaceRegex))
       return Some(ErrorMessageCode(s"Bad tag label, contains whitespace: '$tagLabel'", "TyETAGBLANK_"))
-    BadTagLabelCharsRegex.findFirstIn(tagLabel) foreach { badChar =>
+     */
+    BadTagNameCharsRegex.findFirstIn(tagLabel) foreach { badChar =>
       return Some(ErrorMessageCode(
-        s"Bad tag label: '$tagLabel', contains char: '$badChar'", "TyETAGPUNCT_"))
+        s"Bad tag name: '$tagLabel', contains char: '$badChar'", "TyETAGPUNCT_"))
     }
     None
   }
@@ -89,6 +92,40 @@ trait TagsDao {
 
   def loadTagsForPost(postId: PostId): Set[TagLabel] =
     loadTagsByPostId(Seq(postId)).getOrElse(postId, Set.empty)
+
+
+  def addRemoveTagsIfAuth(toAdd: Seq[Tag], toRemove: Seq[Tag], who: Who): Set[PostId] = {
+    writeTx { (tx, staleStuff) =>
+      // (Remove first, maybe frees some ids.)
+      tx.removeTags(toRemove)
+      var nextTagId = tx.nextTagId()
+      toAdd.foreach(tag => {
+        tx.addTag(tag.copy(id = nextTagId)(ifBad = Die))
+        nextTagId += 1
+      })
+      val postIdsAffected =
+            toAdd.flatMap(_.onPostId).toSet ++
+            toRemove.flatMap(_.onPostId).toSet
+      val pagePostNrByPostId = tx.loadPagePostNrsByPostIds(postIdsAffected)
+      val pageIds = pagePostNrByPostId.values.map(_.pageId).toSet
+      staleStuff.addPageIds(pageIds)
+      val patIdsAffected =
+            toAdd.flatMap(_.onPatId).toSet ++
+            toRemove.flatMap(_.onPatId).toSet
+      // No:
+      //val morePageIds = tx.loadPageIdsWithPostsBy(patIdsAffected, limit = 100)
+      //staleStuff.addPagesWithPostsBy(patIdsAffected)
+      //staleStuff.addPageIds(morePageIds)
+      // Instead, have staleStuff call:
+      //   patIdsAffected foreach markPagesWithUserAvatarAsStale  ?
+      //   and rename: markPagesWithUserAvatarAsStale  to: markPagesStaleIfPostsBy
+      // For now:
+      if (patIdsAffected.nonEmpty) {
+        staleStuff.addAllPages()
+      }
+      postIdsAffected
+    }
+  }
 
 
   def addRemoveTagsIfAuth(pageId: PageId, postId: PostId, tags: Set[Tag_old], who: Who)

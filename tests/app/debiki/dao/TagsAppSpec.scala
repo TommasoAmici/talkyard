@@ -80,7 +80,7 @@ class TagsDaoSpec extends AnyFreeSpec with must.Matchers {
       }
 
       "bad punct" in {
-        for (c <- """!"#$%&'()*+,/;<=>?@[\]^`{|}""") {
+        for (c <- """!"#$%&'()*+,/;<=>?@[\]^`{|}""") {  // now '/' is ok
           val anyProbem = TagsDao.findTagLabelProblem("badpunct_" + c)
           anyProbem.map(_.message).getOrElse("") must contain(c)
           anyProbem.map(_.code) mustBe Some("TyETAGPUNCT_")

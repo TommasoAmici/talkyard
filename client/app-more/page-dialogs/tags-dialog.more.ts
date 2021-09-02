@@ -42,8 +42,8 @@ interface TagsDiagProps {
 interface TagsDiagState {
   store?: Store;
   isOpen?: Bo;
-  isLoading?: Bo;
-  tagTypes: TagType[],
+  editorLoaded?: Bo;
+  tagTypes?: TagType[],
   allTags; // old
   post?: Post;
   curTags: Tag[],
@@ -75,26 +75,32 @@ const TagsDialog = createComponent({
     this.isGone = true;
   },
 
-  open: function(store, post: Post) {
-    const newState: Partial<TagsDiagState> = { isOpen: true, isLoading: true };
+  open: function(store: Store, post: Post) {
+    const newState: Partial<TagsDiagState> = {
+      isOpen: true,
+      store,
+    };
     this.setState(newState);
+
     Server.listTagTypes(ThingType.Pats, '', (tagTypes: TagType[]) => {
       if (this.isGone) return;
-      const newState: Partial<TagsDiagState> = { tagTypes };
+      const newState: Partial<TagsDiagState> = {
+        tagTypes,
+      };
       this.setState(newState);
     });
-    // old
+    /* old
     Server.loadAllTags((tags) => {
       if (this.isGone) return;
       this.setState({ allTags: tags });
-    });
+    }); */
     Server.loadEditorAndMoreBundles(() => {
       if (this.isGone || !this.state.isOpen) return;
+      const curState: TagsDiagState = this.state;
       const newState: Partial<TagsDiagState> = {
-        isLoading: false,
-        store: store,
+        editorLoaded: true,
         post: post,
-        tags: _.clone(post.tags),  // old
+        //tags: _.clone(post.tags),  // old
         curTags: _.clone(post.tags2),
       };
       this.setState(newState);
@@ -102,14 +108,16 @@ const TagsDialog = createComponent({
   },
 
   close: function() {
-    this.setState({ isOpen: false, store: null, post: null, tags: null });
+    this.setState({ isOpen: false, store: null, post: null, curTags: null, tags: null,
+          editorLoaded: false, tagTypes: null
+    });
   },
 
-  // old
+  /* old
   __onSelectChange: function(labelsAndValues: any) {
     labelsAndValues = labelsAndValues || []; // is null if the clear-all [x] button pressed
     this.setState({ tags: labelsAndValues.map(labelValue => labelValue.value) });
-  },
+  }, */
 
   onSelectChange: function(labelsAndValues: any) {
     const state: TagsDiagState = this.state;
@@ -168,7 +176,8 @@ const TagsDialog = createComponent({
         newCurTags.push(origOrNewTag);
       }
     }
-    this.setState({ tags: newCurTags }); // labelsAndValues.map(labelValue => labelValue.value) });
+    const newState: Partial<TagsDiagState> = { curTags: newCurTags };
+    this.setState(newState); // labelsAndValues.map(labelValue => labelValue.value) });
     //this.setState({ tags: labelsAndValues.map(labelValue => labelValue.value) });
   },
 
@@ -192,8 +201,11 @@ const TagsDialog = createComponent({
         tagTypeId: tagTypeWitId.id,
         onPostId: state.post.uniqueId,
       }
-      this.setState({ curTags: [...state.curTags, newTag] });
-      this.refs.newTagInput.clear(); // ?
+      this.setState({
+        curTags: [...state.curTags, newTag],
+        tagTypes: [...state.tagTypes, tagTypeWitId],
+      });
+      //this.refs.newTagInput.clear();  — not
     });
     /*
     let tags = this.state.tags;
@@ -205,7 +217,18 @@ const TagsDialog = createComponent({
   },
 
   save: function() {
-    Server.addRemovePostTags(this.state.post.uniqueId, this.state.tags, () => {
+    const state: TagsDiagState = this.state;
+    // We know if a tag is new, because it then has no tag id.
+    const tagsAdded: Tag[] = _.filter(state.curTags, t => t.id === No.TagId);
+    const tagsBefore = state.post.tags2 || [];
+    const tagsRemoved: Tag[] = [];
+    for (const tagBef of tagsBefore) {
+      const tagNow = _.find(state.curTags, t => t.id === tagBef.id);
+      if (!tagNow) {
+        tagsRemoved.push(tagBef);
+      }
+    }
+    Server.addRemoveTags({ add: tagsAdded, remove: tagsRemoved }, () => {
       if (this.isGone) return;
       this.close();
     });
@@ -219,7 +242,7 @@ const TagsDialog = createComponent({
     if (!state.isOpen) {
       // Nothing.
     }
-    else if (state.isLoading) {
+    else if (!state.editorLoaded || !state.tagTypes) {
       content = r.p({}, t.Loading);
     }
     else {
@@ -262,10 +285,17 @@ const TagsDialog = createComponent({
 
 function makeTagLabelValues(tags: Tag[], tagTypes: TagType[]) {
   return tags.map((tag: Tag) => {
-    const tagType = _.find(tagTypes, it => it.id === tag.tagTypeId);
+    const idOrTagTypeId = tag.id;
+    // Hack, to play nice with ReactSelect: For new tags, the id is 0 (they don't yet
+    // have any id), and they're instead identified by tag type, which
+    // we store in { value }, negative to know it's not a tag id, but a tag type id.
+    const value = tag.id || -tag.tagTypeId;  // negate_tagtype_id
+    //const tagId: TagId | false = tag.id > 0 && tag.id;
+    //const tagTypeId: TagId | false = tag.id < 0 && -tag.id;
+    const tagType = _.find(tagTypes, tagType => tagType.id === tag.tagTypeId);
     return {
-      label: tagType ? tagType.dispName : `tagtypeid:${tag.tagTypeId}`,
-      value: tag.id,
+      label: tagType ? tagType.dispName : `tagTypeId=${tag.tagTypeId}`,
+      value,
     };
   });
 }
@@ -273,8 +303,9 @@ function makeTagLabelValues(tags: Tag[], tagTypes: TagType[]) {
 
 function makeTagTypeLabelValues(tagTypes: TagType[]) {
   return tagTypes.map((tagType: TagType) => {
-    // Minus means it's a tag type id, not a tag id, negate_tagtype_id.
-    return { label: tagType.dispName, value: -tagType.id };
+    // Minus means it's a tag type id, not a tag id, so, in onSelectChange(), we know
+    // the { label, value } refers to a newly added tag, with tag type = -value.
+    return { label: tagType.dispName, value: -tagType.id };  // negate_tagtype_id
   });
 }
 
