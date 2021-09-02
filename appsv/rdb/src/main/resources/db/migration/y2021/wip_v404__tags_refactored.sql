@@ -12,34 +12,6 @@ comment on domain color_d is
 
 
 
-create domain text_oneline_d text_trimmed_not_empty_d;
-alter domain text_oneline_d add constraint text_oneline_d_c_ste1000 check (
-    length(value) <= 1000);
-alter domain text_oneline_d add constraint text_oneline_d_c_print_chars check (
-    value ~ '^[[:print:]]*$');
-comment on domain text_oneline_d is
-    'A one line string — alphanumeric, punctuation and space is ok.';
-
-create domain text_oneline_120_d text_oneline_d;
-alter domain text_oneline_120_d add constraint text_oneline_120_d_c_ste120 check (
-    length(value) <= 120);
-
-create domain text_oneline_60_d text_oneline_d;
-alter domain text_oneline_60_d add constraint text_oneline_60_d_c_ste60 check (
-    length(value) <= 60);
-
-create domain text_oneline_30_d text_oneline_d;
-alter domain text_oneline_30_d add constraint text_oneline_30_d_c_ste30 check (
-    length(value) <= 30);
-
-create domain text_oneline_15_d text_oneline_d;
-alter domain text_oneline_15_d add constraint text_oneline_15_d_c_ste15 check (
-    length(value) <= 15);
-comment on domain text_oneline_15_d is
-    'Like text_oneline_d, but at most 15 chars long.';
-
-
-
 create domain url_slug_d text_trimmed_not_empty_d;
 alter domain url_slug_d add constraint url_slug_d_c_ste1000 check (
     length(value) <= 1000);
