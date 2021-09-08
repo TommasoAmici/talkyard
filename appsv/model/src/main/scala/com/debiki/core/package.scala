@@ -197,6 +197,8 @@ package object core {
 
   type IdpUserInfo = OpenAuthDetails  // renaming
 
+  type NoticeId = i32
+
   sealed abstract class MarkupLang
   object MarkupLang {
     case object Html extends MarkupLang
@@ -494,6 +496,8 @@ package object core {
     def toIso8601Day: St = Prelude.toIso8601Day(millis)
     def toIso8601T: St = Prelude.toIso8601T(millis)
     def toIso8601NoT: St = Prelude.toIso8601NoT(millis)
+
+    def toWhenMins: WhenMins = WhenMins.fromMillis(millis)
   }
 
   object When {
@@ -552,6 +556,30 @@ package object core {
       else
         whenA orElse whenB
     }
+  }
+
+
+  // Just an i32.
+  class WhenMins(val mins: UnixMinutes) extends AnyVal {
+    def millis: i64 = mins * MillisPerMinute
+    def toJavaDate = new ju.Date(millis)
+    override def toString: St = mins.toString + "mins"
+  }
+
+
+  object WhenMins {
+    def fromMins(unixMins: i32): WhenMins = {
+      // Unix seconds 1263000000 is 2010-01-09 01:20,
+      // and that's Unix minutes 21050000.
+      // Unix seconds 4104000000 is 2100-01-19, 00:00,
+      // and that's Unix minutes 68400000.
+      require(unixMins <= 68400000, s"Unix mins > year 2100: $unixMins [TyE4M0WEP35]")
+      require(unixMins >= 21050000, s"Unix mins < year 2010: $unixMins [TyE4M0WEP37]")
+      new WhenMins(unixMins)
+    }
+    def fromMillis(unixMillis: i64): WhenMins = fromMins((unixMillis / MillisPerMinute).toInt)
+    def fromDate(date: ju.Date): WhenMins = fromMillis(date.getTime)
+    def fromDays(unixDays: i32): WhenMins = fromMins(unixDays * 24 * 60)
   }
 
 

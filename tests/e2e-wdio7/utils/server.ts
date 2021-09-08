@@ -314,6 +314,11 @@ function getTestCounters(): TestCounters {
 }
 
 
+function addAdminNotice(ps: { siteId: SiteId, noticeId: Nr }) {
+  postOrDie(settings.mainSiteOrigin + '/-/add-admin-notice', ps);
+}
+
+
 async function getLastEmailSenTo(siteId: SiteId, email: St, dontWait?: 'DontWait')
         : Pr<EmailSubjectBody | Nl> {
   for (let attemptNr = 1; attemptNr <= settings.waitforTimeout / 500; ++attemptNr) {
@@ -740,6 +745,7 @@ export default {
   playTimeDays,
   deleteRedisKey,
   getTestCounters,
+  addAdminNotice,
   getLastEmailSenTo,  // RENAME waitGetLastEmailsSentTo
   countLastEmailsSentTo,
   getEmailsSentToAddrs,

@@ -477,6 +477,7 @@ interface PageIdWhen {
 
 interface Page {
   id: string;
+  extId?: St;
   role: PageRole;      // deprecated ...
   pageType: PageRole;  // ... changing to this instead
   categoryId?: number;
