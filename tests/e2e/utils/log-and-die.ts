@@ -24,7 +24,7 @@ const api = {
   getOrCall,
 
   /// JSON to string — 'j2s' is shorter than 'JSON.stringify'.
-  j2s: function(any: any, hmm?, indentation?: Nr): St {
+  j2s: function(any: any, hmm?: any, indentation?: Nr): St {
     return JSON.stringify.apply(JSON, arguments);
   },
 
