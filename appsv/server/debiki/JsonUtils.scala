@@ -101,7 +101,7 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
       case JsNull => return None
       case bad =>
         throwBadJson(
-          "EsE2YMP7", s"'$fieldName' is not a JsObject, but a ${classNameOf(bad)}")
+            "TyE2YMP73T", s"'$fieldName' is not an object, but a ${classNameOf(bad)}")
     }
 
   def parseJsArray(json: JsValue, fieldName: St, optional: Bo = false): Seq[JsValue] =
@@ -128,7 +128,7 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
       case JsNull => return None
       case bad =>
         throwBadJson(
-          "TyE4MGJ28RP", s"'$fieldName' is not a JsArray, but a ${classNameOf(bad)}")
+            "TyE4MGJ28RP", s"'$fieldName' is not an array, but a ${classNameOf(bad)}")
     }
 
   /*
@@ -213,13 +213,13 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
         throwBadJson("EsE5GUMK", s"'$fieldName' is not a string: " + errors.toString())
     }
 
-  def parsePageRef(json: JsValue, fieldName: St): PageRef = {
+  def parsePageRef(json: JsObject, fieldName: St): PageRef = {
     parseOptPageRef(json, fieldName) getOrElse {
       throwMissing("TyEJSN0PGREF", fieldName)
     }
   }
 
-  def parseOptPageRef(json: JsValue, fieldName: St): Opt[PageRef] = Some {
+  def parseOptPageRef(json: JsObject, fieldName: St): Opt[PageRef] = Some {
     val rawRef = parseOptSt(json, fieldName) getOrElse {
       return None
     }
@@ -239,14 +239,14 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
     val rawRef = parseOptSt(json, fieldName) getOrElse {
       return None
     }
-    core.parsePageRef(rawRef) getOrIfBad { errMsg =>
+    core.parsePostRef(rawRef) getOrIfBad { errMsg =>
       throwBadJson("TyEJSBADPOREF", s"Not a post ref: '$rawRef', problem: $errMsg")
     }
   } */
 
 
   // RENAME! to just parseRef
-  def readParsedRef(json: JsValue, fieldName: String, allowParticipantRef: Boolean): ParsedRef = {
+  def readParsedRef(json: JsObject, fieldName: St, allowParticipantRef: Bo): ParsedRef = {
     val refStr = readString(json, fieldName)
     core.parseRef(refStr, allowParticipantRef = allowParticipantRef) getOrIfBad { problem =>
       throwBadJson("TyEBADREFFLD", s"Field '$fieldName': Bad ref: '$refStr', the problem: $problem")
@@ -254,15 +254,15 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
   }
 
 
-  def parsePostVoteType(json: JsValue, fieldName: St): PostVoteType = {
+  def parsePostVoteType(json: JsObject, fieldName: St): PostVoteType = {
     val voteTypeSt = parseSt(json, fieldName)
     PostVoteType.apiV0_fromStr(voteTypeSt) getOrElse {
-      throwBadJson("TyEJSNPOVOTY", s"$fieldName: Unsupported vote type: '$voteTypeSt''")
+      throwBadJson("TyEJSNPOVOTY", s"$fieldName: Unsupported vote type: '$voteTypeSt'")
     }
   }
 
 
-  def parseNotfLevel(json: JsValue, fieldName: St): NotfLevel = {
+  def parseNotfLevel(json: JsObject, fieldName: St): NotfLevel = {
     val whatLevelSt = parseSt(json, fieldName)
     NotfLevel.fromSt_apiV0(whatLevelSt) getOrElse {
       throwBadJson("TyEJSNNOTFLV",
@@ -327,17 +327,22 @@ object JsonUtils {   MOVE // to talkyard.server.parser.JsonParSer
 
   def parseInt32(json: JsValue, field: St, alt: St = "", default: Opt[i32] = None,
         min: Opt[i32] = None, max: Opt[i32] = None): i32 =
-    readInt(json, fieldName = field, altName = alt, default = default)
+    readInt(json, fieldName = field, altName = alt, default = default,
+          min = min, max = max)
 
 
+  CLEAN_UP // remove-rename all I32 and Int to Int32, and 64, etc,
+  // and "read" to "parse", this whole file.
   def parseI32(json: JsValue, field: St, alt: St = "", default: Opt[i32] = None): i32 =
     readInt(json, field, alt, default)
 
 
   def readInt(json: JsValue, fieldName: String, altName: String = "",
         default: Option[Int] = None, min: Opt[i32] = None, max: Opt[i32] = None): Int =
-    readOptInt(json, fieldName).orElse(readOptInt(json, altName)).orElse(default)
-      .getOrElse(throwMissing("EsE5KPU3", fieldName))
+    readOptInt(json, fieldName, min = min, max = max)
+        .orElse(readOptInt(json, altName, min = min, max = max))
+        .orElse(default)
+        .getOrElse(throwMissing("EsE5KPU3", fieldName))
 
 
   def parseOptI32(json: JsValue, field: St, altField: St = ""): Opt[i32] =

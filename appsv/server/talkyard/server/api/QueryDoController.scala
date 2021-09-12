@@ -37,20 +37,22 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
   extends EdController(cc, edContext) {
 
 
-  def apiV0_query(): Action[JsValue] = PostJsonAction(  // [PUB_API]
+  def apiV0_query(): Action[JsValue] = ApiSecretPostJsonAction(  // [PUB_API]
           RateLimits.ReadsFromDb, maxBytes = 2000) { request: JsonPostRequest =>
     queryDoImpl(request, queryOnly = true)
   }
 
 
-  def apiV0_do(): Action[JsValue] = PostJsonAction(  // [PUB_API]
-          RateLimits.ReadsFromDb, maxBytes = 2000) { request: JsonPostRequest =>
+  def apiV0_do(): Action[JsValue] = ApiSecretPostJsonAction(  // [PUB_API]
+          // For now, may do just a few things. [do_api_limits]
+          RateLimits.UpsertFew, maxBytes = 2000) { request: JsonPostRequest =>
     queryDoImpl(request, doOnly = true)
   }
 
 
-  def apiV0_queryDo(): Action[JsValue] = PostJsonAction(  // [PUB_API]
-          RateLimits.ReadsFromDb, maxBytes = 2000) { request: JsonPostRequest =>
+  def apiV0_queryDo(): Action[JsValue] = ApiSecretPostJsonAction(  // [PUB_API]
+          // Just a few things only. [do_api_limits]
+          RateLimits.UpsertFew, maxBytes = 2000) { request: JsonPostRequest =>
     queryDoImpl(request)
   }
 
@@ -67,6 +69,10 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
     val taskJsValList: Seq[JsValue] = parseJsArray(body, mainField)
     var itemNr = -1
 
+    // [do_api_limits]
+    throwForbiddenIf(taskJsValList.length > 3, "TyEAPI2MNYTSKS",
+          "Too many API tasks — at most 3, for now")
+
     val tasks: Seq[ApiTask] = taskJsValList map { jsVal =>
       itemNr += 1
       val jsOb = asJsObject(jsVal, s"$mainField list item")
@@ -79,17 +85,21 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
       val nestedActions: Opt[JsArray] = parseOptJsArray(jsVal, "doActions")
 
       val anyQueryDefined =
-            getQueryJsOb.isDefined || listQueryJsOb.isDefined || searchQueryJsOb.isDefined
+            getQueryJsOb.isDefined || listQueryJsOb.isDefined ||
+            searchQueryJsOb.isDefined || nestedQueries.isDefined
+
+      val anyActionDefined =
+            doWhatSt.isDefined || nestedActions.isDefined
 
       val anyNestedQueriesActions  =
             nestedQueries.isDefined || nestedActions.isDefined
 
       throwForbiddenIf(doOnly && anyQueryDefined,
-            "TyEWRONGENDP2", o"""Cannot run queries via the Do API /-/v0/do.
+            "TyEWRONGENDP1", o"""Cannot run queries via the Do API /-/v0/do.
                Use  /-/v0/query  or  /-/v0/query-do  instead""")
 
-      throwForbiddenIf(queryOnly && doWhatSt.isDefined,
-            "TyEWRONGENDP1", o"""Cannot do actions via the Query API /-/v0/query.
+      throwForbiddenIf(queryOnly && anyActionDefined,
+            "TyEWRONGENDP2", o"""Cannot do actions via the Query API /-/v0/query.
                Use  /-/v0/do  or  /-/v0/query-do  instead""")
 
       throwUnimplementedIf(anyQueryDefined,
@@ -117,8 +127,8 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
           parseSearchQuery(jsOb)
         } */
         else {
-          throwForbidden("TyEAPIBADITEM", o"""$whatItem has no doWhat, getQuery,
-                listQuery or searchQuery field""")
+          throwForbidden("TyEAPIUNKTASK", o"""$whatItem has no doWhat, getQuery,
+                listQuery, searchQuery, manyQueries or doActions field""")
         }
       }
 
@@ -143,6 +153,7 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
           // Later:  actionDoer.startTransactionIfNotDone
           actionDoer.doAction(a) match {
             case p: Problem =>  // (message, siteId, adminInfo, debugInfo, anyException)
+              // For now, just abort everything.
               throwBadReq("TyEAPIERR", s"Error doing ${a.doWhat.toString} action: ${
                     p.message}")
             case Fine =>
@@ -152,7 +163,8 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
     }
 
     // Later:  actionDoer.tryCommitAnyTransaction
-    // Or is there any  using(ActionDoer) { ... } that auto closes it?
+    //
+    // Or is there any  using(ActionDoer) { ... }  that auto closes it?
   }
 
 }

@@ -11,8 +11,8 @@ case class ActionParser(dao: SiteDao) {
 
 
   def parseAction(doWhatSt: St, actionJsOb: JsObject): ApiAction Or ErrMsg = {
-    // parseActionImpl both returns Bad and throws BadJsonException.
     tryParse {
+      // (parseActionImpl() might throw BadJsonException, instead of returning Bad.)
       parseActionImpl(doWhatSt, actionJsOb) getOrIfBad { errMsg =>
         return Bad(errMsg)
       }
@@ -22,7 +22,7 @@ case class ActionParser(dao: SiteDao) {
 
   private def parseActionImpl(doWhatSt: St, actionJsOb: JsObject): ApiAction Or ErrMsg = {
     val actionType = ActionType.fromSt(doWhatSt) getOrElse {
-      return Bad(s"Unknown action type: $doWhatSt")
+      return Bad(s"Unknown API action type: $doWhatSt")
     }
 
     // Could cache asWhoSt –> pat?  would be the same, for all actions?
@@ -38,12 +38,12 @@ case class ActionParser(dao: SiteDao) {
 
     if (pat.isSystemUser)
       return Bad(o"""You cannot use the System user when doing things via Talkyard's API
-              — but you can use Sysbot, or an ordinary member [TyEAPIUSRSYS]""")
+              — but you can use Sysbot, or an ordinary user [TyEAPIUSRSYS]""")
 
     // For now
     if (pat.isBuiltIn)
       return Bad(o"""Currently built-in users cannot do things via
-            the API [TyEAPIUSRGST]""")
+            the API. Set asWho to a human's user account instead [TyEAPIUSRGST]""")
 
     // Guests may not do lots of things.
     if (pat.isGuest) {
@@ -51,7 +51,7 @@ case class ActionParser(dao: SiteDao) {
         // Later, but first verify it's a Like vote:
         // case ActionType.SetVote =>
         //   // Fine, guests may Like vote.
-        case x =>
+        case _ =>
           return Bad(s"Participant $asWhoSt is a guest and therefore may not: $doWhatSt")
       }
     }

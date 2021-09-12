@@ -164,6 +164,7 @@ trait PagePathMetaDao {
   }
 
 
+  // Later, return a PageMeta Or ErrMsg?
   def getPageMetaByParsedRef(parsedRef: ParsedRef): Opt[PageMeta] = {
     parsedRef match {
       case ParsedRef.PageId(id) => getPageMeta(id)
@@ -176,6 +177,7 @@ trait PagePathMetaDao {
           case PagePath.Parsed.Good(pagePath: PagePath) =>
             val pathWithId: Opt[PagePathWithId] = checkPagePath2(pagePath)
             pathWithId.flatMap(pathWithId => getPageMeta(pathWithId.pageId))
+            // Later, return Bad("No such page: id") if not found?
           case c: PagePath.Parsed.Corrected =>
             // For now
             None

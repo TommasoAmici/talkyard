@@ -2238,7 +2238,7 @@ trait PostsDao {
 
 
   def addVoteIfAuZ(pageId: PageId, postNr: PostNr, voteType: PostVoteType,
-        voterId: UserId, voterIp: String, postNrsRead: Set[PostNr]): Unit = {
+        voterId: UserId, voterIp: Opt[IpAdr], postNrsRead: Set[PostNr]): Unit = {
     require(postNr >= PageParts.BodyNr, "TyE5WKAB20")
 
     writeTx { (tx, staleStuff) =>
@@ -2289,12 +2289,8 @@ trait PostsDao {
           Set(postNr)
         }
 
-      if (voterIp != "SKIP_IP") {  CLEAN_UP // change to Opt[IpAdr] instead?
-                                            // Or to:  PatIpAdr(..) | BackendApi   ?
-                                            // is uninteresting if via backend API
-        tx.updatePostsReadStats(pageId, postsToMarkAsRead, readById = voterId,
-              readFromIp = voterIp)
-      }
+      tx.updatePostsReadStats(pageId, postsToMarkAsRead, readById = voterId,
+            readFromIp = voterIp)
       updatePageAndPostVoteCounts(post, tx)
       updatePagePopularity(page.parts, tx)
       addUserStats(UserStats(post.createdById, numLikesReceived = 1))(tx)

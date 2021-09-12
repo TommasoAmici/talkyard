@@ -413,9 +413,9 @@ class DebugTestController @Inject()(cc: ControllerComponents, edContext: EdConte
       futureReply.map(sentToAddrsUntyped => {
         val sentToAddrs = sentToAddrsUntyped.asInstanceOf[Seq[String]]
         dieIf(!sentToAddrs.forall(Email.isE2eTestEmailAddress), "TyE2ABK503")
-        Ok(Json.obj(
+        OkApiJson(Json.obj(
           "num" -> sentToAddrs.length,
-          "addrsByTimeAsc" -> sentToAddrs)) as JSON
+          "addrsByTimeAsc" -> sentToAddrs))
       })
     }
 

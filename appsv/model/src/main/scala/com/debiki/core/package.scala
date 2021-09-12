@@ -223,10 +223,13 @@ package object core {
   type RawRef = Ref  //  ... started
 
   sealed trait PatRef
-  sealed trait PageRef {
+
+  sealed trait PageRef { self: ParsedRef =>
     // Why this needed, I thought the compiler would deduce this itself?
-    def asParsedRef: ParsedRef = this.asInstanceOf[ParsedRef]
+    // (when [the exact type is known to the compiler], and it extends PageRef).
+    def asParsedRef: ParsedRef = self
   }
+
   sealed trait PostRef
 
   sealed abstract class ParsedRef(
@@ -236,13 +239,13 @@ package object core {
 
   object ParsedRef {
     case class ExternalId(value: ExtId)
-      extends ParsedRef with PatRef with PageRef
+      extends ParsedRef with PatRef with PageRef with PostRef
 
     case class SingleSignOnId(value: St)
       extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
 
     case class TalkyardId(value: St)
-      extends ParsedRef with PatRef with PageRef
+      extends ParsedRef with PatRef with PageRef with PostRef
 
     case class PageId(value: core.PageId)
       extends ParsedRef(canBeToPat = false) with PageRef
@@ -251,13 +254,17 @@ package object core {
       extends ParsedRef(canBeToPat = false) with PageRef
 
     case class UserId(value: core.UserId)
-      extends ParsedRef(canBeToPat = true, canOnlyBeToPat = true) with PatRef
+      extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
 
     case class Username(value: St)
       extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
 
     case class Groupname(value: St)
       extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
+
+    // Either a user or a group, but not a guest.
+    //case class Membername(value: St)
+    //  extends ParsedRef(canOnlyBeToPat = true, canBeToPage = false) with PatRef
 
     // Maybe trait PageLookupId { def lookupId: St }  —>  "diid:..." or "https://..." ?
     case class DiscussionId(diid: St)
@@ -308,12 +315,12 @@ package object core {
       returnBadIfDisallowParticipant()
       val idSt = ref drop "userid:".length
       val id = idSt.toIntOption getOrElse {
-        return Bad("Not an integer: " + ref)
+        return Bad("After 'userid:' must follow an integer: " + ref)
       }
       if (Pat.isGuestId(id))
-        return Bad("Not a user, but a guest id: " + ref)
+        return Bad("Not a user ref, but a guest ref: " + ref)
       if (Pat.isBuiltInGroup(id))
-        return Bad("Not a user, but a built-in group id: " + ref)
+        return Bad("Not a user ref, but a built-in group ref: " + ref)
       Good(ParsedRef.UserId(id))
     }
     else if (ref startsWith "username:") {
@@ -366,7 +373,8 @@ package object core {
   /** Email identities are strings, all others are numbers but converted to strings. */
   type IdentityId = String
 
-  type IpAddress = String
+  type IpAddress = String  // Too long
+  type IpAdr = IpAddress  // [Scala_3] opaque type
 
   type EmailAdr = String  // [Scala_3] opaque type
   type EmailId = String   // [Scala_3] opaque type   RENAME to EmailOutId instead?

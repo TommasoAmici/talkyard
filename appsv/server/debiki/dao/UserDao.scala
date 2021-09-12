@@ -861,7 +861,7 @@ trait UserDao {
   def getParticipantByParsedRef(ref: ParsedRef): Option[Participant] = {
     // username: and userid: refs must be to users (not guests or groups).
     COULD // return Bad("Not a user, but a guest/group: __")
-    val returnBadUnlessUserNotGuest = (pat: Opt[Pat]) =>
+    val returnBadUnlessIsUser = (pat: Opt[Pat]) =>
       if (pat.exists(!_.isUserNotGuest))
         return None  // Bad("Not a user but a ${}: ${ref}")
 
@@ -876,18 +876,22 @@ trait UserDao {
         tyId.toIntOption flatMap getParticipant
       case ParsedRef.UserId(id) =>
         val pat = getParticipant(id)
-        returnBadUnlessUserNotGuest(pat)
+        returnBadUnlessIsUser(pat)
         pat
       case ParsedRef.SingleSignOnId(ssoId) =>
         getMemberBySsoId(ssoId)
       case ParsedRef.Username(username) =>
         val pat = getMemberByUsername(username)
-        returnBadUnlessUserNotGuest(pat)
+        returnBadUnlessIsUser(pat)
         pat
       case ParsedRef.Groupname(username) =>
         val pat = getMemberByUsername(username)
         returnBadUnlessGroup(pat)
         pat
+      //case ParsedRef.Membername(membername) =>
+      // val pat = getMemberByUsername(username)
+      // returnBadUnlessUserOrGroup(pat)
+      // pat
     }
   }
 

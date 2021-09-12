@@ -2,11 +2,17 @@ package talkyard.server
 
 import com.debiki.core._
 
+
 package object api {
+
 
   sealed abstract class ApiTask
 
-  // Later:  case class ApiQuery
+  // Later:
+  // trait ApiQuery
+  // case class ApiGetQuery
+  // case class ApiListQuery
+  // case class ApiSearchQuery
 
   case class ApiAction(
     asWho: Pat,
@@ -17,6 +23,8 @@ package object api {
     // doWhen: ..
     // doIf: ..
   ) extends ApiTask
+
+
 
   sealed abstract class ActionType
 
@@ -30,6 +38,8 @@ package object api {
       case _ => return None
     })
   }
+
+
 
   sealed abstract class ActionParams
 
