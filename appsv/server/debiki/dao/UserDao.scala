@@ -1852,12 +1852,6 @@ trait UserDao {
 
   def savePageNotfPrefIfAuZ(pageNotfPref: PageNotfPref, byWho: Who): U = {
     editMemberThrowUnlessSelfStaff(pageNotfPref.peopleId, byWho, "TyE2AS0574", "change notf prefs") { tx =>
-      SECURITY // minor: One can find out if a *page id* is valid or not, by
-      // trying to subscribe to notfs to that page, and if there's not any error,
-      // then a page with such an id, exists.
-      // Look at all other fns that add db links to pages or users, and verify that
-      // they check if pat / the requester may see the page, before proceeding,
-      // otherwise throwIndistinguishableNotFound.
       tx.upsertPageNotfPref(pageNotfPref)
     }
   }
