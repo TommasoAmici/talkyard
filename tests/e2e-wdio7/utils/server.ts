@@ -137,7 +137,7 @@ function postOrDie(
     curlHeadersTexts.push(`-H '${key}: ${value}'`);
   });
   let curlDataText = j2s(data).replace("'", "'\\''");
-  if (curlDataText.length > 1000 && settings.logLevel != 'trace') {
+  if (curlDataText.length > 1500 && settings.logLevel != 'trace') {
     // This is a bit much json, makes the logs annoyingly verbose. So truncate. Won't be
     // copy-pasteable.
     curlDataText = curlDataText.substr(0, 1500) + '\n       ...';
@@ -717,17 +717,6 @@ async function do_(ps: { origin: St, apiRequesterId: UserId, apiSecret: St, fail
         apiSecret: ps.apiSecret });
   return ps.fail ? response.bodyText : response.bodyJson();
 }
-//runQueries
-/*
-function fullTextSearch<T extends ThingFound>(ps: {
-      origin: St, queryText: St, opts?: {
-          cookie?: St | Nl, sidHeader?: St, xsrfTokenHeader?: St | Nl, fail?: true }})
-      :  SearchQueryResults<T> | St {
-  const url = ps.origin + '/-/v0/search';
-  const requestBody: SearchQueryApiRequest = {
-    searchQuery: { freetext: ps.queryText },
-    pretty: true,
-  };  */
 
 
 

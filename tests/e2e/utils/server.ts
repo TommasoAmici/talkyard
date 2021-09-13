@@ -102,7 +102,7 @@ function postOrDie(url, data, opts: { apiRequesterId?: number, apiSecret?: strin
     curlHeadersTexts.push(`-H '${key}: ${value}'`);
   });
   let curlDataText = j2s(data).replace("'", "'\\''");
-  if (curlDataText.length > 1000 && settings.logLevel != 'trace') {
+  if (curlDataText.length > 1500 && settings.logLevel != 'trace') {
     // This is a bit much json, makes the logs annoyingly verbose. So truncate. Won't be
     // copy-pasteable.
     curlDataText = curlDataText.substr(0, 1500) + '\n       ...';

@@ -48,7 +48,7 @@ interface ApiRequest {
 
 // An API request can include one or many things for the server to do — many tasks.
 // For example, a SearchQueryApiRequest includes just a single SearchQueryApiTask,
-// — whilst a ManyQueriesApiRequest can include many SearchQueryApiTask:s.
+// whilst a ManyQueriesApiRequest can include many SearchQueryApiTask:s.
 interface ApiTask {}
 
 type ApiResponse<R> = ApiErrorResponse | R;
@@ -467,13 +467,13 @@ interface GetQueryResults<T extends ThingFound> {
 interface ListQueryApiRequest extends ApiRequest, ListQueryApiTask {
 }
 
-interface ContinueListQueryApiRequest extends ApiRequest {
-  continueAtScrollCursor?: ListResultsScrollCursor;
+interface ListQueryApiTask extends ApiTask {
+  listQuery: ListQuery;
   limit?: Nr;
 }
 
-interface ListQueryApiTask extends ApiTask {
-  listQuery: ListQuery;
+interface ContinueListQueryApiRequest extends ApiRequest {
+  continueAtScrollCursor?: ListResultsScrollCursor;
   limit?: Nr;
 }
 
@@ -653,6 +653,7 @@ interface SearchQueryApiTask extends ApiTask {
 
 interface ContinueSearchQueryApiRequest extends ApiRequest {
   continueAtScrollCursor?: SearchResultsScrollCursor;
+  limit?: Nr;
 }
 
 
@@ -855,8 +856,8 @@ type ActionGraph = Unimplemented;
 interface Action {
   asWho: St; // 'sysbot' | 'tyid:_' | 'extid:_' | 'ssoid:_' | 'username:_';
   doWhat: ActionType,
-  doWhen?: 'now' | 'YYYY-MM-DDTHH:MI:SSZ';
-  doIf?; // hmm
+  //doWhen?: 'YYYY-MM-DDTHH:MI:SSZ';
+  //doIf?;
   doWhy?: St; // optional description for the audit log
   doHow: Object;  // per action type parameters
 }
@@ -897,8 +898,8 @@ interface CreateReplyPostAction extends Action {
   doWhat: 'CreateReplyPost';
   doHow: {
     replyTo: { pageId: PageId, postNr?: PostNr } | { postId: PostId };
-    text: St;
-    textFormat: 'CommonMark';
+    body: St;
+    bodyFormat: 'CommonMark';
   }
 }
 
@@ -906,8 +907,8 @@ interface CreateMetaPostAction extends Action {
   doWhat: 'CreateMetaPost';
   doHow: {
     appendTo: { pageId: PageId };
-    text: St;
-    textFormat: 'CommonMark';
+    body: St;
+    bodyFormat: 'CommonMark';
   }
 }
 
@@ -937,16 +938,16 @@ interface CreateMetaPostAction extends Action {
 //      asWho: 'ssoid:some-user-id',
 //      doWhat: 'CreateMetaPost',
 //      doHow: {
-//        text: _,
-//        textFormat: 'CommonMark',
+//        body: _,
+//        bodyFormat: 'CommonMark',
 //        appendTo: { pageId: _ },
 //      }
 //    }, {
 //      asWho: 'ssoid:some-user-id',
 //      doWhat: 'CreateReplyPost',
 //      doHow: {
-//        text: _,
-//        textFormat: 'CommonMark',
+//        body: _,
+//        bodyFormat: 'CommonMark',
 //        replyTo: { pageId: _, postNr: _ },
 //      }
 //    }, {
@@ -978,8 +979,7 @@ interface CreateMetaPostAction extends Action {
 //    }, {
 //      // Nested — e.g. to run in single transaction. Not implemented (maybe never).
 //      inSingleTransaction: true;
-//      doActions: [{
-//      }],
+//      doActions: [{ ... }, { ... }, { ... }],
 //    }],
 //  }
 //
@@ -992,16 +992,18 @@ interface CreateMetaPostAction extends Action {
 //    }, {
 //      ok: true,   // if 'SetNotfLevel' went fine
 //    }, {
-//      error: {    // if 'CreatePage' failed
+//      error: {    // if 'CreateMetaPost' failed
 //        errCode: _,
 //        errMsg: _,
 //      }
+//    }, {
+//    ...
 //    }, {
 //      ok: true,   // user created
 //    }, {
 //      ok: true,   // user added to group
 //    }, {
-//      results: [{ ... }, { ... }, ...]  // nested doActions results
+//      results: [{ ... }, { ... }, { ... }]  // nested doActions results
 //    }],
 //  }
 //
@@ -1033,7 +1035,7 @@ interface QueryDoApiRequest extends ApiRequest, QueryDoApiTask {
 
 interface QueryDoApiTask extends ApiTask {
   inSingleTransaction?: true;  // default: false
-  runQueriesDoActions: (QueryApiTask | ManyQueriesApiTask | Action | DoActionsApiTask)[];
+  queriesAndActions: (QueryApiTask | ManyQueriesApiTask | Action | DoActionsApiTask)[];
 }
 
 type RunQueriesDoActionsResults = ApiResponse<ManyResults>;
@@ -1081,8 +1083,8 @@ type RunQueriesDoActionsResults = ApiResponse<ManyResults>;
 //       { thingsOrErrs: [...] },  // getQuery results
 //       { thingsFound: [...] },   // listQuery results
 //       { thingsFound: [...] },   // searchQuery results
-//       { results: [{ ok: true }, ...] },  // doActions results
-//       { results: [...] },       // manyQueries results
+//       { results: [{ ok: true }, ...] },  // nested doActions results
+//       { results: [...] },                // nested manyQueries results
 //     ],
 //   }
 

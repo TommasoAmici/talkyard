@@ -3,10 +3,8 @@
 import * as _ from 'lodash';
 import assert from '../utils/ty-assert';
 import server from '../utils/server';
-import * as utils from '../utils/utils';
 import { buildSite } from '../utils/site-builder';
 import { TyE2eTestBrowser, TyAllE2eTestBrowsers } from '../utils/pages-for';
-import { dieIf } from '../utils/log-and-die';
 import c from '../test-constants';
 
 let allBrowsers: TyAllE2eTestBrowsers;
@@ -32,7 +30,7 @@ const apiSecret: TestApiSecret = {
   createdAt: c.MinUnixMillis,
   deletedAt: undefined,
   isDeleted: false,
-  secretKey: 'publicE2eTestSecretKeyAbc123',
+  secretKey: 'publicE2eTestSecretKey123456',
 };
 
 const owensReplyOne = 'owensReplyOne';
@@ -53,7 +51,6 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
     // (since Owen would get emails).
     builder.settings({
       numFirstPostsToApprove: 0,
-      //maxPostsPendApprBefore: 0,
       numFirstPostsToReview: 0,
     });
 
@@ -99,14 +96,11 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
     site = server.importSiteData(forum.siteData);
     server.skipRateLimits(site.id);
     michaelsPageUrl = site.origin + '/' + forum.topics.byMichaelCategoryA.slug;
-
     mariasPageUrl = site.origin + '/' + forum.topics.byMariaCategoryA.slug;
-    //mariasPagePathRef = 'pagepath:/' + forum.topics.byMariaCatA.slug;
   });
 
 
   // ----- Prepare
-
 
   it(`Owen goes to Michael's topic`, async () => {
     await owen_brA.go2(michaelsPageUrl);
@@ -127,8 +121,7 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
   let apiResp;
 
 
-  // ----- One action at a time
-
+  // ----- One Do API action at a time
 
   it(`Memah via the Do API likes Michael's page`, async () => {
     apiResp = await server.apiV0.do_({
@@ -152,15 +145,14 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
       data: {
         doActions: [
               makeSubscribeAction(
-                  // Test an ssoid ref.  TyTREFTYPES01
-                  'ssoid:memah_ssoid', 'pageid:' + forum.topics.byMichaelCatA.id)],
+                  // Test an ssoid ref, and, for the page, a tyid ref.  TyTREFTYPES01
+                  'ssoid:memah_ssoid', 'tyid:' + forum.topics.byMichaelCatA.id)],
       },
     });
   });
 
 
   // ----- Two actions at once
-
 
   it(`Mons via the Do API likes Maria's page and subscribes`, async () => {
     apiResp = await server.apiV0.do_({
@@ -179,10 +171,9 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
 
   // ----- It works?
 
-
   it(`Owen sees the Like vote`, async () => {
     await owen_brA.refresh2();
-    await owen_brA.topic.waitForLikeVote(c.BodyNr);
+    await owen_brA.waitForMyDataAdded();                      // [.my_data_first]
     assert.that(await owen_brA.topic.isPostLiked(c.BodyNr));  // ttt
   });
 
@@ -197,20 +188,18 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
   });
 
 
-  it(`Owen replies to Michael. But maybe that was a bad idea!`, async () => {
+  it(`Owen replies to Michael. But maybe a bad idea!  TyTDISCRE08`, async () => {
     await owen_brA.complex.replyToOrigPost(owensReplyOne);
   });
 
-
-  it(`... Memah gets a notf email`, async () => {
+  it(`... Memah gets a notf email (subscribed via the Do API)`, async () => {
     await server.waitUntilLastEmailMatches(site.id, memah.emailAddress, owensReplyOne);
   });
 
 
   // ----- Undoing the actions
 
-
-  it(`Memah removes the Like vote, and unsubscribes — she wants silence`, async () => {
+  it(`Memah removes the Like vote! And unsubscribes`, async () => {
     apiResp = await server.apiV0.do_({
       origin: site.origin,
       apiRequesterId: c.SysbotUserId,
@@ -218,7 +207,7 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
       data: {
         doActions:
               makeLikeAndSubscribeActions(
-                  // Test username:  and urlpath: refs.  TyTREFTYPES01
+                  // Test username:  and pagepath: refs.  TyTREFTYPES01
                   'username:' + memah.username,
                   'pagepath:/' + forum.topics.byMichaelCatA.slug, // id not shown in url
                   true /* undo */),
@@ -226,18 +215,15 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
     });
   });
 
-
   it(`Owen sees the Like vote no more`, async () => {
     await owen_brA.refresh2();
-    await owen_brA.waitForMyDataAdded();
+    await owen_brA.waitForMyDataAdded();   // [.my_data_first]
     assert.not(await owen_brA.topic.isPostLiked(c.BodyNr));
   });
 
   it(`Owen replies again`, async () => {
     await owen_brA.complex.replyToOrigPost(whereIsTheLikeVote_mentionMaja);
   });
-
-
 
   it(`Memah goes to Maria's page`, async () => {
     await memah_brB.go2(mariasPageUrl);
@@ -246,15 +232,14 @@ describe(`do-api-like-and-subscribe.2br  TyTEAPILIKESUBS`, () => {
     await memah_brB.complex.replyToOrigPost(memahsReplyOne);
   });
 
-
   it(`... Maja gets a notification — Owen @mentioned her`, async () => {
     await server.waitUntilLastEmailMatches(
             site.id, maja.emailAddress, 'where_is_like_vote');
   });
-
   it(`... Mons gets a notification about Memah's reply`, async () => {
     await server.waitUntilLastEmailMatches(site.id, mons.emailAddress, memahsReplyOne);
   });
+
 
   let addrsByTimeAsc_;
 
