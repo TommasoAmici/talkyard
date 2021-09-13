@@ -165,7 +165,7 @@ object EdHttp {  // REFACTOR move to  talkyard.server.http object methods?
     //   p.http.Status.MOVED_PERMANENTLY
 
   def throwOkSafeJson(json: JsValue): Nothing =
-    throw ResultException(controllers.OkSafeJson(json))
+    throw ResultException(controllers.OkSafeJsValue(json))
 
   def throwBadRequest(errCode: String, message: String = ""): Nothing =
     throwBadReq(errCode, message)

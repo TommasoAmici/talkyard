@@ -80,14 +80,14 @@ object Utils extends Results with http.ContentTypes {
    * Ty's Javascript strips the ")]}'," prefix  [5LKW02D4]
    * before parsing the JSON.
    */
-  def OkSafeJson(json: JsObject, pretty: Bo = false): Result = {
-    OkApiJson(json, pretty)
+  def OkSafeJson(json: JsObject): Result = {
+    OkApiJson(json)
   }
   @deprecated("Now", "Use OkSafeJson(JsObject, ..) instead")
-  def OkSafeJson(json: JsArray, pretty: Bo = false): Result = {
-    OkSafeJsonPrefix(json, pretty)
+  def OkSafeJson(json: JsArray): Result = {
+    OkSafeJsValue(json)
   }
-  private def OkSafeJsonPrefix(json: JsValue, pretty: Boolean = false): Result = {
+  def OkSafeJsValue(json: JsValue, pretty: Boolean = false): Result = {
     val jsonString = if (pretty) Json.prettyPrint(json) else Json.stringify(json)
     // Would excluding the prefix be a maybe breaking API change?
     // Better post about this in the forum first.

@@ -20,7 +20,7 @@ package ed.server
 import com.debiki.core._
 import debiki.dao.SiteDao
 import ed.server.security.{BrowserId, SidStatus, XsrfOk}
-import play.api.libs.json.{JsValue, JsObject}
+import play.api.libs.json.{JsValue, JsArray, JsObject}
 import play.api.mvc._
 
 
@@ -29,7 +29,11 @@ package object http {
   def OkApiJson(json: JsObject): Result =
     _root_.controllers.Utils.OkApiJson(json)
 
-  def OkSafeJson(json: JsValue): Result =
+  def OkSafeJson(json: JsObject): Result =
+    _root_.controllers.Utils.OkSafeJson(json)
+
+  @deprecated("Now", "Use OkSafeJson(JsObject) instead")
+  def OkSafeJson(json: JsArray): Result =
     _root_.controllers.Utils.OkSafeJson(json)
 
 
