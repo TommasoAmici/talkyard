@@ -4185,6 +4185,7 @@ export class TyE2eTestBrowser {
             // Suddenly, Sept 2021, FB has added a 2nd cookie button. Who knows why.
             // So let's accept cookies a 2nd time.
             if (await this.tryClickNow(cookieYesBtn2) === 'Clicked') {
+              logMessage("Accepted FB cookies 2.");
               // Contiue looping afterwards, until the dialog closes or we see the
               // create-user Talkyard fields. Also, it seemed as if the first click
               // once didn't work, who cares why, just click more?
@@ -4193,6 +4194,7 @@ export class TyE2eTestBrowser {
             // Previously, there was some confirmation button. Mayeb FB will
             // add it back?
             if (await this.tryClickNow(yesBtn) === 'Clicked') {
+              logMessage("Clicked some FB Continue button.");
               // Continue looping, see if{} above.
               return false;
             }
