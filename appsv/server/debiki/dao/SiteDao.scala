@@ -512,7 +512,7 @@ class SiteDao(
   }
 
 
-  def addAdminNotice(noticeId: i32): U = {
+  def addAdminNotice(noticeId: NoticeId): U = {
     writeTx { (tx, _) =>
       tx.addAdminNotice(noticeId)
     }

@@ -46,19 +46,19 @@ export function getServerAnnouncements(store: Store): RElm | Nl {
 
   // Depends on features enabled / in use at this particular site).
 
-  const adminNotices: RElm[] = (me.adminNotices || []).map((notice: Notice, ix: Nr) => {
-    let text: St | RElm;
+  const adminNotices: RElm[] = (me.adminNotices || []).map((notice: Notice) => {
+    let text: St | RElm = 'TyE02MREG56';
     switch (notice.id) {
       case Notices.TwitterLoginConfigured:
         const anyoneUsesTwitterLogin =
                 _.some(me.adminNotices, n => n.id === Notices.TwitterLoginInUse);
-        text = rFr({},
+        text = r.p({},
               r.b({ className: 'e_TwLgI-Conf' }, "Twitter login willl stop working. "),
               "Twitter login is enabled in this forum" + (
               anyoneUsesTwitterLogin ? '.' : " — but it seems no one uses it."));
         break;
       case Notices.TwitterLoginInUse:
-        text = rFr({},
+        text = r.p({},
               r.b({ className: 'e_TwLgI-InUse' }, "Twitter login in use"),
               " — but will stop working.");
         break;
@@ -70,9 +70,7 @@ export function getServerAnnouncements(store: Store): RElm | Nl {
     return help.HelpMessageBox({ key: notice.id, message: {
         // SAn = Server Announcement, NtcX = Notice X.
         id: `SAn_Ntc${notice.id}`, version: 1, isWarning: true,
-        content: rFr({},
-          r.p({}, text),
-          ThisShownToAdminsOnly()),
+        content: rFr({}, text, ThisShownToAdminsOnly()),
     } });
   });
 

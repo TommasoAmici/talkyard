@@ -6,9 +6,9 @@ comment on domain when_mins_d is
     'To catch bugs, must be between year 2010 and 2100.';
 
 create table notices_t (
-  site_id_c int,
-  to_pat_id_c int,
-  notice_id_c i32_gz_d,
+  site_id_c int,  -- pk
+  to_pat_id_c int,  -- pk
+  notice_id_c i32_gz_d,  -- pk
   first_at_c when_mins_d not null,
   last_at_c when_mins_d not null,
   num_total_c i32_gz_d not null,
@@ -18,7 +18,9 @@ create table notices_t (
 
   -- ix: pk
   constraint notices_r_pats foreign key (site_id_c, to_pat_id_c) references
-      users3 (site_id, user_id) deferrable
+      users3 (site_id, user_id) deferrable,
+
+  constraint notices_c_firstat_lte_lastat check (first_at_c <= last_at_c)
 );
 
 create index notices_ig_noticeid on notices_t (notice_id_c);

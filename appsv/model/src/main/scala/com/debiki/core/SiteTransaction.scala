@@ -63,7 +63,7 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def loadResourceUsage(): ResourceUse
 
   def loadAdminNotices(): ImmSeq[Notice]
-  def addAdminNotice(noticeId: i32): U
+  def addAdminNotice(noticeId: NoticeId): U
 
 
   def loadCategory(categoryId: CategoryId): Option[Category]

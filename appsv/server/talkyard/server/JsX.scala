@@ -120,10 +120,10 @@ object JsX {   RENAME // to JsonPaSe
     Json.obj(
           "id" -> n.noticeId,
           "toPatId" -> n.toPatId,
-          "firstAt" -> JsWhenMins(n.firstAt),
-          "lastAt" -> JsWhenMins(n.lastAt),
+          "firstAtMins" -> JsWhenMins(n.firstAt),
+          "lastAtMins" -> JsWhenMins(n.lastAt),
           "numTotal" -> n.numTotal,
-          "noticeData" -> n.noticeData)
+          "noticeData" -> JsObjOrNull(n.noticeData))
   }
 
 
@@ -747,10 +747,10 @@ object JsX {   RENAME // to JsonPaSe
     JsNumber(value.mins)
 
   def JsWhenMinsOrNull(value: Option[When]): JsValue =
-    value.map(when => JsNumber(when.unixMinutes)).getOrElse(JsNull)
+    value.map(JsWhenMins) getOrElse JsNull
 
-  def JsWhenMins2OrNull(value: Option[WhenMins]): JsValue =
-    value.map(v => JsNumber(v.mins)).getOrElse(JsNull)
+  def JsWhenMins2OrNull(value: Opt[WhenMins]): JsValue =
+    value.map(JsWhenMins) getOrElse JsNull
 
   def JsDateMsOrNull(value: Option[ju.Date]): JsValue =
     value.map(JsDateMs).getOrElse(JsNull)

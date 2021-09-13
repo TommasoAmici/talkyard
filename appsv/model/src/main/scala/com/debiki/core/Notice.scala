@@ -13,10 +13,10 @@ case class Notice(
 ) {
   // For now, admins only.
   require(toPatId == Group.AdminsId, "TyE40fMJ2W4")
-  require(noticeData.isEmpty, "TyE40fMJ25MG")
-  // What about clock skew? Oh well.
-  require(lastAt.millis >= firstAt.millis, "TyE70SRDE55F")
+  require(noticeId >= 1001, "TyE5R02MRSEG4")
+  require(firstAt.millis <= lastAt.millis, "TyE70SRDE55F")
   require(numTotal >= 1, "TyE70SRDE550")
+  require(noticeData.isEmpty, "TyE40fMJ25MG")
 }
 
 

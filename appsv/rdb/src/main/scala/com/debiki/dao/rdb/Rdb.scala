@@ -109,8 +109,8 @@ object Rdb {
     def asIntMins: AnyRef = when.mins.asAnyRef
   }
 
-  implicit class PimpOptionWithNullIntMins(opt: Option[WhenMins]) {
-    def orNullIntMins: AnyRef = opt.map(_.mins.asAnyRef).getOrElse(NullInt)
+  implicit class PimpOptionWithNullIntMins(opt: Opt[WhenMins]) {
+    def orNullIntMins: AnyRef = opt.map(_.mins.asAnyRef) getOrElse NullInt
   }
 
   implicit class PimpOptionWithNullJsValue(opt: Option[play.api.libs.json.JsValue]) {

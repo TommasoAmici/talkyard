@@ -3,7 +3,6 @@
 import * as _ from 'lodash';
 import assert from '../utils/ty-assert';
 import server from '../utils/server';
-import * as utils from '../utils/utils';
 import { buildSite } from '../utils/site-builder';
 import { TyE2eTestBrowser } from '../utils/pages-for';
 import c from '../test-constants';
@@ -69,23 +68,22 @@ describe(`show-admin-notices.2br.e2e.ts  TyTE2EADMNTC`, () => {
   it(`Owen reloads the page`, async () => {
     await owen_brA.refresh2();
   });
-  it(`... now there's an admin notice, and an announcement`, async () => {
+  it(`... now there's an admin notice (and the latest version ann.)`, async () => {
     await owen_brA.tips.waitForExactlyNumAnnouncements(2);
     await owen_brA.tips.assertAnnouncementDisplayed('.e_TwLgI-Conf');
     await owen_brA.tips.assertAnnouncementDisplayed('.e_LstTyV');
-
   });
 
 
-  it(`Something else happens! No rest for the wicked!`, async () => {
+  it(`Something else happens!`, async () => {
     await server.addAdminNotice({ siteId: site.id, noticeId: 1002 });
   });
 
 
-  it(`Owen reloads the page`, async () => {
-    await owen_brA.refresh2();
+  it(`Owen goes to the forum homepage — notices should be shown here too`, async () => {
+    await owen_brA.go2('/');
   });
-  it(`... now there're two admin notices, and an announcement`, async () => {
+  it(`... now there're two admin notices, and the ver. ann.`, async () => {
     await owen_brA.waitForMyDataAdded();
     assert.eq(await owen_brA.tips.numAnnouncementsDisplayed(), 2 + 1);  // ttt
   });
@@ -116,10 +114,10 @@ describe(`show-admin-notices.2br.e2e.ts  TyTE2EADMNTC`, () => {
   });
 
 
-  it(`Owen hides the most recent notice`, async () => {
+  it(`Owen hides the most recent admin notice`, async () => {
     await owen_brA.tips.hideAnAnnouncement();
   });
-  it(`... now there're just one admin notice, and an announcement`, async () => {
+  it(`... now there're just one notice, and an announcement`, async () => {
     await owen_brA.waitForMyDataAdded();
     assert.eq(await owen_brA.tips.numAnnouncementsDisplayed(), 2);
   });
@@ -148,9 +146,12 @@ describe(`show-admin-notices.2br.e2e.ts  TyTE2EADMNTC`, () => {
     await owen_brA.tips.waitForExactlyNumAnnouncements(2 + 1);
   });
   it(`... also after page relod`, async () => {
-    await owen_brA.refresh2();
-    await owen_brA.waitForMyDataAdded();
-    assert.eq(await owen_brA.tips.numAnnouncementsDisplayed(), 2 + 1);  // ttt
+    // There's a race, so try a few times. [e2e_tips_race]  (The browser doesn't wait
+    // for the server to be done un-hiding the announcements.)
+    await owen_brA.refreshUntil(async () => {
+      await owen_brA.waitForMyDataAdded();
+      return await owen_brA.tips.numAnnouncementsDisplayed() === 2 + 1;  // ttt
+    });
   });
   it(`... namely about Twitter, and the server version`, async () => {
     await owen_brA.tips.assertAnnouncementDisplayed('.e_TwLgI-InUse');

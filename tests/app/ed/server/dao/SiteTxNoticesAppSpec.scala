@@ -24,7 +24,7 @@ import debiki.dao.{CreateForumResult, DaoAppSuite, SiteDao}
 
 class SiteTxNoticesAppSpec extends DaoAppSuite(startTime = DaoAppSuite.Jan2020) {
 
-  def mkNotice(siteId: SiteId, id: i32) =
+  private def mkNotice(siteId: SiteId, id: i32): Notice =
     Notice(
       siteId = siteId,
       toPatId = Group.AdminsId,
@@ -70,8 +70,7 @@ class SiteTxNoticesAppSpec extends DaoAppSuite(startTime = DaoAppSuite.Jan2020) 
           val notices = tx.loadAdminNotices()
           notices.length mustBe 1
           notices mustBe Seq(
-                mkNotice(siteId = daoSite1.siteId,
-                Notice.TwitterLoginConfigured))
+                mkNotice(siteId = daoSite1.siteId, Notice.TwitterLoginConfigured))
         }
       }
 

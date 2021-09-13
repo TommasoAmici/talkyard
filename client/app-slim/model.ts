@@ -630,8 +630,8 @@ interface Notification {
 interface Notice {
   id: NoticeId;
   toPatId: 19;  // always to admins, group 19, currently
-  firstAt: WhenMins;
-  lastAt: WhenMins,
+  firstAtMins: WhenMins;
+  lastAtMins: WhenMins,
   numTotal: Nr,
   noticeData?: Object,
 }

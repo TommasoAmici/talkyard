@@ -375,8 +375,7 @@ class RdbSiteTransaction(var siteId: SiteId, val daoFactory: RdbDaoFactory, val 
   }
 
 
-  // Could break out to separate file.
-  def addAdminNotice(noticeId: i32): U = {
+  def addAdminNotice(noticeId: NoticeId): U = {
     val statement = """
           insert into notices_t (
             site_id_c,
@@ -387,7 +386,9 @@ class RdbSiteTransaction(var siteId: SiteId, val daoFactory: RdbDaoFactory, val 
             num_total_c)
           values (?, ?, ?, ?, ?, 1)
           on conflict (site_id_c, to_pat_id_c, notice_id_c) do update set
-            last_at_c = excluded.last_at_c,
+            -- use greatest(), in case of clock skew or races?
+            last_at_c = greatest(notices_t.last_at_c, excluded.last_at_c),
+            first_at_c = least(notices_t.first_at_c, excluded.first_at_c),
             num_total_c = notices_t.num_total_c + 1
         """
     val values = List(
@@ -399,6 +400,7 @@ class RdbSiteTransaction(var siteId: SiteId, val daoFactory: RdbDaoFactory, val 
     runUpdateSingleRow(statement, values)
   }
   // --------------------------------------------------
+
 
   def nextPageId(): PageId = {
     transactionCheckQuota { connection =>
