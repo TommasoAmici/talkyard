@@ -1,6 +1,6 @@
 create domain when_mins_d i32_gez_d;
-alter domain when_mins_d add constraint when_mins_d_c_bef_y2100 check (value <= 68400000);
 alter domain when_mins_d add constraint when_mins_d_c_aft_y2010 check (value >= 21050000);
+alter domain when_mins_d add constraint when_mins_d_c_bef_y2100 check (value <= 68400000);
 comment on domain when_mins_d is
     'A point in time, in minutes (not seconds) since 1970, so fits in an i32. '
     'To catch bugs, must be between year 2010 and 2100.';
