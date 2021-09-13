@@ -22,7 +22,7 @@ import debiki.EdHttp._
 import ed.server.liftweb
 import java.{lang => jl}
 import play.api._
-import play.api.libs.json.{Json, JsValue, JsObject}
+import play.api.libs.json.{Json, JsValue, JsArray, JsObject}
 import play.api.mvc._
 
 
@@ -80,7 +80,14 @@ object Utils extends Results with http.ContentTypes {
    * Ty's Javascript strips the ")]}'," prefix  [5LKW02D4]
    * before parsing the JSON.
    */
-  def OkSafeJson(json: JsValue, pretty: Boolean = false): Result = {
+  def OkSafeJson(json: JsObject, pretty: Bo = false): Result = {
+    OkApiJson(json, pretty)
+  }
+  @deprecated("Now", "Use OkSafeJson(JsObject, ..) instead")
+  def OkSafeJson(json: JsArray, pretty: Bo = false): Result = {
+    OkSafeJsonPrefix(json, pretty)
+  }
+  private def OkSafeJsonPrefix(json: JsValue, pretty: Boolean = false): Result = {
     val jsonString = if (pretty) Json.prettyPrint(json) else Json.stringify(json)
     // Would excluding the prefix be a maybe breaking API change?
     // Better post about this in the forum first.
