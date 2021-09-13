@@ -57,7 +57,8 @@ Talkyard nowadays uses custom domain datatypes, for new columns and tables.
 I've even defined custom domains for integers and floats: `i32_d`,
 `i32_gz_d` (has a greather than zero check constraint). And
 `f32_d` and `f64_d` instead of `real` and `double precision` (`f64` is shorter and
-simpler to remember I think).
+simpler to remember I think). Etc etc, type `\dD` in psql to have a look
+(start psql like so: `s/tyd cd` "cd" means Console, for the Database).
 
 Usually it makes sense to create a new custom domain, with a bunch of constraints,
 and adding no constraints to the relevant table itself.
@@ -95,6 +96,7 @@ type `\d tablename` in psql).
 Don't include `site_id_c` in these names — the site id is always there, not interesting.
 Instead, in the few cases where the site id is _not_ included, use `_ig_`,
 for index, "global": `tablename_ig_col1_col2` means `col1` and `col2` across all sites.
+Or, `tablename_ug_...` for a server wide unique index (don't think there is any).
 
 
 When adding a foreign key, always include a comment on the line above
