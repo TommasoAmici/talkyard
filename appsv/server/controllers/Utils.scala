@@ -79,10 +79,14 @@ object Utils extends Results with http.ContentTypes {
    *   - http://haacked.com/archive/2008/11/20/anatomy-of-a-subtle-json-vulnerability.aspx
    * Ty's Javascript strips the ")]}'," prefix  [5LKW02D4]
    * before parsing the JSON.
+
+   CLEAN_UP // don't have 3x these at 3 places !
+
    */
   def OkSafeJson(json: JsObject): Result = {
     OkApiJson(json)
   }
+
   @deprecated("Now", "Use OkSafeJson(JsObject, ..) instead")
   def OkSafeJson(json: JsArray): Result = {
     OkSafeJsValue(json)
