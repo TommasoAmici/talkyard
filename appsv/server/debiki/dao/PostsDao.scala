@@ -325,7 +325,7 @@ trait PostsDao {
     ... derive prefs, looking at own and groups ...
     val oldPostsByAuthor = page.parts.postByAuthorId(authorId)
     if (oldPostsByAuthor.isEmpty) {
-      savePageNotfPref(PageNotfPref(
+      savePageNotfPrefIfAuZ(PageNotfPref(
             peopleId = authorId,
             NotfLevel.WatchingAll,
             pageId = Some(pageId)), byWho = Who.System)

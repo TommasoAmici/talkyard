@@ -94,7 +94,7 @@ abstract class AuthnReqHeader extends SomethingToRateLimit {
   def requesterOrUnknown: Participant = user getOrElse UnknownParticipant
   def requesterIdOrUnknown: UserId = user.map(_.id) getOrElse UnknownUserId
   def theRequester: Participant = theUser
-  def theReqer: Participant = theUser  // shorter, better
+  def theReqer: Pat = theUser  // shorter, better
 
   def tenantId: SiteId = dao.siteId
   def siteId: SiteId = dao.siteId

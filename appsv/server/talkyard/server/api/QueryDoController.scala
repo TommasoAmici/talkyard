@@ -70,8 +70,8 @@ class QueryDoController @Inject()(cc: ControllerComponents, edContext: EdContext
     var itemNr = -1
 
     // [do_api_limits]
-    throwForbiddenIf(taskJsValList.length > 3, "TyEAPI2MNYTSKS",
-          "Too many API tasks — at most 3, for now")
+    throwForbiddenIf(taskJsValList.length > 5, "TyEAPI2MNYTSKS",
+          "Too many API tasks — at most 5, for now")
 
     val tasks: Seq[ApiTask] = taskJsValList map { jsVal =>
       itemNr += 1

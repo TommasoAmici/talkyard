@@ -1850,14 +1850,20 @@ trait UserDao {
   }
 
 
-  def savePageNotfPref(pageNotfPref: PageNotfPref, byWho: Who): Unit = {
+  def savePageNotfPrefIfAuZ(pageNotfPref: PageNotfPref, byWho: Who): U = {
     editMemberThrowUnlessSelfStaff(pageNotfPref.peopleId, byWho, "TyE2AS0574", "change notf prefs") { tx =>
+      SECURITY // minor: One can find out if a *page id* is valid or not, by
+      // trying to subscribe to notfs to that page, and if there's not any error,
+      // then a page with such an id, exists.
+      // Look at all other fns that add db links to pages or users, and verify that
+      // they check if pat / the requester may see the page, before proceeding,
+      // otherwise throwIndistinguishableNotFound.
       tx.upsertPageNotfPref(pageNotfPref)
     }
   }
 
 
-  def deletePageNotfPref(pageNotfPref: PageNotfPref, byWho: Who): Unit = {
+  def deletePageNotfPrefIfAuZ(pageNotfPref: PageNotfPref, byWho: Who): Unit = {
     editMemberThrowUnlessSelfStaff(pageNotfPref.peopleId, byWho, "TyE5KP0GJL", "delete notf prefs") { tx =>
       tx.deletePageNotfPref(pageNotfPref)
     }

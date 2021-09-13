@@ -63,7 +63,7 @@ case class ActionDoer(dao: SiteDao, reqerId: ReqrId) { // later, tags branch:  c
               peopleId = action.asWho.id,
               notfLevel = params.whatLevel,
               pageId = Some(pageMeta.pageId))
-        dao.savePageNotfPref(newNotfPref, reqerId)
+        dao.savePageNotfPrefIfAuZ(newNotfPref, reqerId)
     }
     Fine
   }

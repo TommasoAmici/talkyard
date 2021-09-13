@@ -79,7 +79,6 @@ object Utils extends Results with http.ContentTypes {
    *   - http://haacked.com/archive/2008/11/20/anatomy-of-a-subtle-json-vulnerability.aspx
    * Ty's Javascript strips the ")]}'," prefix  [5LKW02D4]
    * before parsing the JSON.
-   * !! Don't use for the API or if is JsObject. Search for "JSON"?
    */
   def OkSafeJson(json: JsValue, pretty: Boolean = false): Result = {
     val jsonString = if (pretty) Json.prettyPrint(json) else Json.stringify(json)
