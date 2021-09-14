@@ -64,7 +64,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
       tx.upsertTagType(tagType)
       tagType
     }}
-    OkSafeApiJson(Json.obj(
+    OkSafeJson(Json.obj(
       "newTagType" -> JsX.JsTagType(tagType)))
   }
 
@@ -150,7 +150,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
     val storePatch = dao.jsonMaker.makeStorePatchForPosts(
           postIds = affectedPostIds, showHidden = true, dao)
 
-    OkSafeApiJson(storePatch)
+    OkSafeJson(storePatch)
 
     /*
     val pageId = (request.body \ "pageId").as[PageId]
