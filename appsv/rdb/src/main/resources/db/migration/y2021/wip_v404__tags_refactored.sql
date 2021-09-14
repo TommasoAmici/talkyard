@@ -1,5 +1,5 @@
 
-create domain page_id_st_d text;
+create domain page_id_st_d text_oneline_60_d;
 comment on domain page_id_st_d is
     'Currently, page ids are strings — later, those will become aliases, '
     'and there''l be numeric ids instead?';
@@ -12,9 +12,7 @@ comment on domain color_d is
 
 
 
-create domain url_slug_d text_trimmed_not_empty_d;
-alter domain url_slug_d add constraint url_slug_d_c_ste1000 check (
-    length(value) <= 1000);
+create domain url_slug_d text_oneline_d;
 alter domain url_slug_d add constraint url_slug_d_c_regex check (
     value ~ '^[[:alnum:]_-]*$');
 alter domain url_slug_d add constraint url_slug_d_c_lower check (
@@ -26,7 +24,7 @@ create domain url_slug_60_d url_slug_d;
 alter domain url_slug_60_d add constraint url_slug_60_d_c_ste60 check (
     length(value) <= 60);
 comment on domain url_slug_60_d is
-    'Like url_slug_inf_d, but at most 30 chars long.';
+    'Like url_slug_d, but at most 60 chars long.';
 
 
 
@@ -41,9 +39,17 @@ comment on domain html_class_suffix_30_d is
 
 
 -- See tags.dd.adoc.
-create domain thing_types_d i16_d;
-alter domain thing_types_d add constraint thing_types_d_c_in check (
-    value in (31, 224));
+create domain thing_types_d i64_d;
+alter domain thing_types_d add constraint thing_types_d_c_in check (value in (7, 56));
+
+
+create or replace function is_ok_tag_chars(txt text) returns boolean
+language plpgsql as $_$
+begin
+    -- No whitespace, commas, ';' etcetera. Sync with Scala [7JES4R3-2]
+    return txt ~ '^[[:alnum:] _.:/-]+$';
+end;
+$_$;
 
 create domain tag_name_120_d text_oneline_120_d;
 alter domain tag_name_120_d add constraint tag_name_120_d_c_chars check (is_ok_tag_chars(value));
@@ -54,15 +60,6 @@ alter domain tag_name_15_d add constraint tag_name_15_d_c_chars check (is_ok_tag
 
 comment on domain tag_name_15_d is
     'Like text_oneline_15_d, but allows only alnum, space and some punctuation chars.';
-
-
-create or replace function is_ok_tag_chars(txt text) returns boolean
-language plpgsql as $_$
-begin
-    -- No whitespace, commas, ';' etcetera. Sync with Scala [7JES4R3-2]
-    return txt ~ '^[[:alnum:] _.:/-]+$';
-end;
-$_$;
 
 
 create or replace function index_friendly(txt text) returns text
@@ -82,8 +79,8 @@ $_$ immutable;
 
 
 create table tagtypes_t (
-  site_id_c  int,
-  id_c  i32_gz_d,
+  site_id_c  int,  -- pk
+  id_c  i32_gz_d,  -- pk
   can_tag_what_c  thing_types_d not null,
   scoped_to_pat_id_c  int,
   is_personal bool,
@@ -99,7 +96,7 @@ create table tagtypes_t (
   css_class_suffix_c  html_class_suffix_30_d,
   sort_order_c  i16_d,
 
-  created_by_id_c int,
+  created_by_id_c int not null,
   deleted_by_id_c int,
   merged_into_tagtype_id_c int,
   merged_by_id_c int,
@@ -110,12 +107,12 @@ create table tagtypes_t (
   constraint tagtypes_r_sites foreign key (site_id_c)
       references sites3 (id) deferrable,
 
-  -- fk ix: tagtypes_i_ scopedto
-  constraint tagtypes_scopedto_r_pats foreign key (site_id_c, scoped_to_pat_id_c)
+  -- fk ix: tagtypes_i_scopedto
+  constraint tagtypes_scopedtopat_r_pats foreign key (site_id_c, scoped_to_pat_id_c)
       references users3 (site_id, user_id) deferrable,
 
   -- fk ix: tagtypes_i_descrpage
-  constraint tagtypes_r_pages foreign key (site_id_c, descr_page_id_c)
+  constraint tagtypes_descrpage_r_pages foreign key (site_id_c, descr_page_id_c)
       references pages3 (site_id, page_id) deferrable,
 
   -- fk ix: tagtypes_i_createdby
@@ -141,14 +138,10 @@ create table tagtypes_t (
 
 -- App server code will need to prevent abbr_name_c, disp_name_c, long_name_c from
 -- being the same, for different tag types.
-create unique index tagtypes_u_anypat_urlslug on tagtypes_t (
-    site_id_c, coalesce(scoped_to_pat_id_c, 0), url_slug_c);
-create unique index tagtypes_u_anypat_dispname on tagtypes_t (
-    site_id_c, coalesce(scoped_to_pat_id_c, 0), index_friendly(disp_name_c));
-create unique index tagtypes_u_anypat_longname on tagtypes_t (
-    site_id_c, coalesce(scoped_to_pat_id_c, 0), index_friendly(long_name_c));
-create unique index tagtypes_u_anypat_abbrname on tagtypes_t (
-    site_id_c, coalesce(scoped_to_pat_id_c, 0), index_friendly(abbr_name_c));
+create unique index tagtypes_u_anypat_urlslug  on tagtypes_t (site_id_c, coalesce(scoped_to_pat_id_c, 0), url_slug_c);
+create unique index tagtypes_u_anypat_dispname on tagtypes_t (site_id_c, coalesce(scoped_to_pat_id_c, 0), index_friendly(disp_name_c));
+create unique index tagtypes_u_anypat_longname on tagtypes_t (site_id_c, coalesce(scoped_to_pat_id_c, 0), index_friendly(long_name_c));
+create unique index tagtypes_u_anypat_abbrname on tagtypes_t (site_id_c, coalesce(scoped_to_pat_id_c, 0), index_friendly(abbr_name_c));
 
 create index tagtypes_i_scopedto on tagtypes_t (site_id_c, scoped_to_pat_id_c);
 create index tagtypes_i_descrpage on tagtypes_t (site_id_c, descr_page_id_c);
@@ -161,12 +154,12 @@ create index tagtypes_i_mergedby on tagtypes_t (site_id_c, merged_by_id_c);
 
 
 create table tags_t (
-  site_id_c int,
-  id_c i32_gz_d,
-  tagtype_id_c int,
-  parent_tag_id_c int,
-  on_pat_id_c int,
-  on_post_id_c int,
+  site_id_c  int,  -- pk
+  id_c  i32_gz_d,  -- pk
+  tagtype_id_c  int not null,
+  parent_tag_id_c  int,
+  on_pat_id_c  int,
+  on_post_id_c  int,
 
   constraint tags_p_id primary key (site_id_c, id_c),
   -- Postgres 10 wants these unique constraints, so two foreign keys below have
@@ -174,9 +167,6 @@ create table tags_t (
   -- these rows are unique without these constraints, because of the primary key.
   constraint tags_u_id_patid unique (site_id_c, id_c, on_pat_id_c),
   constraint tags_u_id_postid unique (site_id_c, id_c, on_post_id_c),
-
-  constraint tags_c_tags_one check (
-      (on_pat_id_c is not null) <> (on_post_id_c is not null)),
 
   -- fk ix: tags_i_tagtypeid
   constraint tags_r_tagtypes foreign key (site_id_c, tagtype_id_c)
@@ -190,16 +180,17 @@ create table tags_t (
   -- The parent tag (user badge) must be for the same *user* (or guest or group).
   -- Postgres v10 wants a unique index on these columns, although there's already
   -- tags_p_id, so they're already unique for sure.
-  -- fk ix: tags_i_parentid
-  -- unique index: tags_u_id_patid
-  constraint tags_parentid_patid_r_tags_id_patid
+  -- fk ix: tags_i_parentid (works, although  on_pat_id_c not in the index?
+  -- since it's last [.skip_fk_ix_last_col])
+  -- references unique index: tags_u_id_patid
+  constraint tags_parenttagid_onpatid_r_tags_id_onpatid
       foreign key (site_id_c, parent_tag_id_c, on_pat_id_c)
       references tags_t (site_id_c, id_c, on_pat_id_c) deferrable,
 
   -- The parent tag must be on the same *post*.
-  -- fk ix: tags_i_parentid
-  -- unique index: tags_u_id_postid
-  constraint tags_parentid_postid_r_tags_id_postid
+  -- fk ix: tags_i_parentid (works? [.skip_fk_ix_last_col]
+  -- references unique index: tags_u_id_postid
+  constraint tags_parenttagid_onpostid_r_tags_id_onpostid
       foreign key (site_id_c, parent_tag_id_c, on_post_id_c)
       references tags_t (site_id_c, id_c, on_post_id_c) deferrable,
 
@@ -207,9 +198,12 @@ create table tags_t (
   constraint tags_r_pats foreign key (site_id_c, on_pat_id_c)
       references users3 (site_id, user_id) deferrable,
 
-  -- fk ix: tags_i_onpageid
+  -- fk ix: tags_i_onpostid
   constraint tags_r_posts foreign key (site_id_c, on_post_id_c)
       references posts3 (site_id, unique_post_id) deferrable,
+
+  constraint tags_c_tags_one_thing check (
+      (on_pat_id_c is not null) <> (on_post_id_c is not null)),
 
   -- For now, see runQueryFindNextFreeInt32().
   constraint tags_c_id_gt1000 check (id_c > 1000)
@@ -217,9 +211,6 @@ create table tags_t (
 
 
 create index tags_i_tagtypeid on tags_t (site_id_c, tagtype_id_c);
-create index tags_i_parentid on tags_t (site_id_c, parent_tag_id_c)
-    where parent_tag_id_c is not null;
-create index tags_i_onpatid on tags_t (site_id_c, on_pat_id_c)
-    where on_pat_id_c is not null;
-create index tags_i_onpostid on tags_t (site_id_c, on_post_id_c)
-    where on_post_id_c is not null;
+create index tags_i_parentid  on tags_t (site_id_c, parent_tag_id_c) where parent_tag_id_c is not null;
+create index tags_i_onpatid   on tags_t (site_id_c, on_pat_id_c) where on_pat_id_c is not null;
+create index tags_i_onpostid  on tags_t (site_id_c, on_post_id_c) where on_post_id_c is not null;
