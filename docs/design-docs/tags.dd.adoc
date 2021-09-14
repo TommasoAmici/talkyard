@@ -167,6 +167,10 @@ Guests, (built-in users), users, bot users, groups,  = 2^5 - 1 = 31.
 Pages (orig posts), replies, meta posts, = 2^5 + 2^6 + 2^7 - 1 = 32+64+128 = 224
 Think about later: categories, tags, votes, flags, edit suggestions, plugins, ... .
 
+No! Intstead?:
+  Guests = 2^0 + Users = 2^1 + Groups = 2^2       =  7  (instead of 31)
+  Pages  = 2^3 + Replies = 2^4 + Meta posts = 2^5 = 56  (instead of 224)
+
 Therefore: domain thing_types_d, can be only 31 or 224, for now.
 
 
