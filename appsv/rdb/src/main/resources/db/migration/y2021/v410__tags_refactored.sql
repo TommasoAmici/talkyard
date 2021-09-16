@@ -1,28 +1,86 @@
 
-create domain page_id_st_d text_oneline_60_d;
-comment on domain page_id_st_d is
-    'Currently, page ids are strings — later, those will become aliases, '
-    'and there''l be numeric ids instead?';
-
 create domain color_d as text;
-alter domain color_d add constraint color_d_c_hex_or_rgb_or_hsl check (
-    value ~ '^#[a-f0-9]{3}([a-f0-9]{3})?$');
+alter domain  color_d add
+   constraint color_d_c_hex_or_rgb_or_hsl check (value ~ '^#[a-f0-9]{3}([a-f0-9]{3})?$');
 comment on domain color_d is
     'CSS colors, for now lowercase hex: "#ab3", "#aabb33". Later, also rgba, hsl, hsla.';
 
 
+create or replace function is_trimmed(value text) returns boolean
+language plpgsql as $_$
+begin
+    return value ~ '^(\S(.*\S)?)?$';
+end;
+$_$;
 
-create domain url_slug_d text_oneline_d;
-alter domain url_slug_d add constraint url_slug_d_c_regex check (
-    value ~ '^[[:alnum:]_-]*$');
-alter domain url_slug_d add constraint url_slug_d_c_lower check (
-    lower(value) = value);
+create domain text_nonempty_inf_d text;
+alter domain  text_nonempty_inf_d add
+   constraint text_nonempty_d_c_nonempty check (length(value) > 0);
+
+
+create domain text_nonempty_ste2100_d  text_nonempty_inf_d;
+alter domain  text_nonempty_ste2100_d add
+   constraint text_nonempty_ste2100_d_c_ste2100 check (length(value) <= 2100);
+
+create domain text_nonempty_ste2100_trimmed_d  text_nonempty_ste2100_d;
+alter domain  text_nonempty_ste2100_trimmed_d add constraint
+              text_nonempty_ste2100_trimmed_d_c_trimmed check (is_trimmed(value));
+
+
+create domain text_nonempty_ste120_d  text_nonempty_inf_d;
+alter domain  text_nonempty_ste120_d add
+   constraint text_nonempty_ste120_d_c_ste120 check (length(value) <= 120);
+
+create domain text_nonempty_ste120_trimmed_d  text_nonempty_ste120_d;
+alter domain  text_nonempty_ste120_trimmed_d add constraint
+              text_nonempty_ste120_trimmed_d_c_trimmed check (is_trimmed(value));
+
+
+create domain text_nonempty_ste60_d  text_nonempty_inf_d;
+alter domain  text_nonempty_ste60_d add
+   constraint text_nonempty_ste60_d_c_ste60 check (length(value) <= 60);
+
+create domain text_nonempty_ste60_trimmed_d  text_nonempty_ste60_d;
+alter domain  text_nonempty_ste60_trimmed_d add
+   constraint text_nonempty_ste60_trimmed_d_c_trimmed check (is_trimmed(value));
+
+
+create domain text_nonempty_ste30_d  text_nonempty_inf_d;
+alter domain  text_nonempty_ste30_d add
+   constraint text_nonempty_ste30_d_c_ste30 check (length(value) <= 30);
+
+create domain text_nonempty_ste30_trimmed_d  text_nonempty_ste30_d;
+alter domain  text_nonempty_ste30_trimmed_d add constraint
+              text_nonempty_ste30_trimmed_d_c_trimmed check (is_trimmed(value));
+
+create domain text_nonempty_ste15_d  text_nonempty_inf_d;
+alter domain  text_nonempty_ste15_d add
+   constraint text_nonempty_ste15_d_c_ste15 check (length(value) <= 15);
+
+comment on domain text_nonempty_ste15_d is
+    'Non-empty text, shorter than or equal to 15 chars long.';
+
+create domain text_nonempty_ste15_trimmed_d  text_nonempty_ste15_d;
+alter domain  text_nonempty_ste15_trimmed_d add
+   constraint text_nonempty_ste15_trimmed_d_c_trimmed check (is_trimmed(value));
+
+comment on domain text_nonempty_ste15_trimmed_d is
+    'Like text_nonempty_ste15_d, but does not start or end with spaces, tabs, newlines.';
+
+
+
+create domain url_slug_d  text_nonempty_ste2100_d;
+alter domain  url_slug_d add
+   constraint url_slug_d_c_regex check (value ~ '^[[:alnum:]_-]*$');
+alter domain  url_slug_d add
+  constraint  url_slug_d_c_lower check (lower(value) = value);
+
 comment on domain url_slug_d is
     'Chars that make sense in an URL slug — lowercase alphanumeric, and "-_".';
 
 create domain url_slug_60_d url_slug_d;
-alter domain url_slug_60_d add constraint url_slug_60_d_c_ste60 check (
-    length(value) <= 60);
+alter domain  url_slug_60_d add
+   constraint url_slug_60_d_c_ste60 check (length(value) <= 60);
 comment on domain url_slug_60_d is
     'Like url_slug_d, but at most 60 chars long.';
 
@@ -30,9 +88,10 @@ comment on domain url_slug_60_d is
 
 -- If wasn't a suffix, would need to verify didn't start with Ty's own classes,
 -- that is, c_... and e_... (or legacy: s_... es_... and others).
-create domain html_class_suffix_30_d text_oneline_30_d;
-alter domain html_class_suffix_30_d
-    add constraint html_class_suffix_30_d_c_regex check (value ~ '^[a-zA-Z0-9_-]*$');
+create domain html_class_suffix_30_d  text_nonempty_ste30_d;
+alter domain  html_class_suffix_30_d add
+   constraint html_class_suffix_30_d_c_regex check (
+    value ~ '^[a-zA-Z0-9_-]*$');
 comment on domain html_class_suffix_30_d is
     'Text that make sense to append to a CSS class: ASCII alnum and "-_"';
 
@@ -40,35 +99,42 @@ comment on domain html_class_suffix_30_d is
 
 -- See tags.dd.adoc.
 create domain thing_types_d i64_d;
-alter domain thing_types_d add constraint thing_types_d_c_in check (value in (7, 56));
+alter domain  thing_types_d add
+   constraint thing_types_d_c_in check (value in (7, 56));
 
 
 create or replace function is_ok_tag_chars(txt text) returns boolean
 language plpgsql as $_$
 begin
-    -- No whitespace, commas, ';' etcetera. Sync with Scala [7JES4R3-2]
-    return txt ~ '^[[:alnum:] _.:/-]+$';
+    -- No whitespace, commas, '(){}[]' etcetera. Sync with Scala [7JES4R3-2]
+    return txt ~ '^[[:alnum:] !?&%_.:=/~+*-]*$';
 end;
 $_$;
 
-create domain tag_name_120_d text_oneline_120_d;
-alter domain tag_name_120_d add constraint tag_name_120_d_c_chars check (is_ok_tag_chars(value));
-create domain tag_name_60_d text_oneline_60_d;
-alter domain tag_name_60_d add constraint tag_name_60_d_c_chars check (is_ok_tag_chars(value));
-create domain tag_name_15_d text_oneline_15_d;
-alter domain tag_name_15_d add constraint tag_name_15_d_c_chars check (is_ok_tag_chars(value));
+create domain tag_name_120_d text_nonempty_ste120_trimmed_d;
+alter domain  tag_name_120_d add
+   constraint tag_name_120_d_c_chars check (is_ok_tag_chars(value));
+
+create domain tag_name_60_d text_nonempty_ste60_trimmed_d;
+alter domain  tag_name_60_d add
+   constraint tag_name_60_d_c_chars check (is_ok_tag_chars(value));
+
+create domain tag_name_15_d text_nonempty_ste15_trimmed_d;
+alter domain  tag_name_15_d add
+   constraint tag_name_15_d_c_chars check (is_ok_tag_chars(value));
 
 comment on domain tag_name_15_d is
-    'Like text_oneline_15_d, but allows only alnum, space and some punctuation chars.';
+    'Like text_nonempty_ste15_trimmed_d, but allows only alnum, space and '
+    'some punctuation chars.';
 
 
-create or replace function index_friendly(txt text) returns text
+create or replace function index_friendly(value text) returns text
 language plpgsql as $_$
 begin
     -- Treat all punctuation as the same — replace with a single '_'.
     -- And consider all blanks the same as well: replace with a single ' '.
     return regexp_replace(regexp_replace(regexp_replace(
-            lower(trim(txt)),
+            lower(trim(value)),
             '[^[:print:]]+', '', 'g'),
             '[[:blank:]]+', ' ', 'g'),
             '[[:punct:]]+', '_', 'g');
@@ -88,7 +154,7 @@ create table tagtypes_t (
   disp_name_c  tag_name_60_d not null,
   long_name_c  tag_name_120_d,
   abbr_name_c  tag_name_15_d,
-  descr_page_id_c  page_id_st_d,
+  descr_page_id_c  text,
   descr_url_c  http_url_d,
   text_color_c  color_d,
   handle_color_c  color_d,
