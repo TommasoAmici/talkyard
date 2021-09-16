@@ -71,7 +71,7 @@ declare namespace debiki2.pagedialogs {
   function openMovePostsDialog(store: Store, post: Post, closeCaller, at: Rect);
   function openSeeWrenchDialog();
   function openShareDialog(post: Post, button);
-  function openTagsDialog(store: Store, post: Post);
+  function openTagsDialog(ps: { forPost?: Post, forPat?: Pat, store: Store });
   function openWikifyDialog(post: Post);
   function openLikesDialog(post: Post, voteType: PostVoteType, at: Rect)
 

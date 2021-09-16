@@ -32,8 +32,6 @@ object TagsDao {
   val MaxNumTags = 200
   val MaxTagLength = 30
 
-  val WhitespaceRegex: Regex = """.*[\s].*""".r
-
   // Old, don't use for now — better be a bit restrictive, initially.
   //val OkLabelRegex: Regex = """^[^\s,;|'"<>]+$""".r
   //
@@ -50,17 +48,13 @@ object TagsDao {
   //  - https://stackoverflow.com/q/6279694/694469
   //  - https://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html
   // val BadTagLabelCharsRegex: Regex = """.*[\p{Punct}&&[^/_~:.-]].*""".r  // sync with SQL [7JES4R3]
-  val BadTagNameCharsRegex: Regex = """.*[^\p{Alnum} _.:/-].*""".r // sync with SQL [7JES4R3-2]
+  val BadTagNameCharsRegex: Regex = """.*[^\p{Alnum} !?&%_.:=/~+*-].*""".r // sync with SQL [7JES4R3-2]
 
   def findTagLabelProblem(tagLabel: TagLabel): Option[ErrorMessageCode] = {
     if (tagLabel.length < MinTagLength)
       return Some(ErrorMessageCode(s"Tag label too short: '$tagLabel'", "TyEMINTAGLEN_"))
     if (tagLabel.length > MaxTagLength)
       return Some(ErrorMessageCode(s"Tag label too long: '$tagLabel'", "TyEMAXTAGLEN_"))
-    /*
-    if (tagLabel.matches(WhitespaceRegex))
-      return Some(ErrorMessageCode(s"Bad tag label, contains whitespace: '$tagLabel'", "TyETAGBLANK_"))
-     */
     BadTagNameCharsRegex.findFirstIn(tagLabel) foreach { badChar =>
       return Some(ErrorMessageCode(
         s"Bad tag name: '$tagLabel', contains char: '$badChar'", "TyETAGPUNCT_"))
@@ -100,7 +94,7 @@ trait TagsDao {
       tx.removeTags(toRemove)
       var nextTagId = tx.nextTagId()
       toAdd.foreach(tag => {
-        tx.addTag(tag.copy(id = nextTagId)(ifBad = Die))
+        tx.addTag(tag.copy(id = nextTagId)(IfBadDie))
         nextTagId += 1
       })
       val postIdsAffected =

@@ -18,7 +18,7 @@
 package controllers
 
 import com.debiki.core._
-import com.debiki.core.Prelude.ThrowBadReq
+import com.debiki.core.Prelude.IfBadAbortReq
 import debiki.{JsonMaker, RateLimits, SiteTpi}
 import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
@@ -51,8 +51,8 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   def createTagType: Action[JsValue] = AdminPostJsonAction(
         maxBytes = 2000) { req =>  // RateLimits.CreateTag,
     import req.{dao, theRequester}
-    val tagTypeMaybeId: TagType = JsX.parseTagType(req.body, Some(theRequester.id),
-          dieOrComplain = ThrowBadReq)
+    val tagTypeMaybeId: TagType =
+          JsX.parseTagType(req.body, Some(theRequester.id))(IfBadAbortReq)
     throwForbiddenIf(tagTypeMaybeId.id != NoTagTypeId, "TyE603MWEJ5",
           "Specify tag type id 0")
     debiki.dao.TagsDao.findTagLabelProblem(tagTypeMaybeId.dispName) foreach { errMsg =>
@@ -60,7 +60,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
     }
     val tagType = dao.writeTx { (tx, _) => {
       val nextId = tx.nextTagTypeId()
-      val tagType = tagTypeMaybeId.copy(id = nextId)(ifBad = ThrowBadReq)
+      val tagType = tagTypeMaybeId.copy(id = nextId)(IfBadAbortReq)
       tx.upsertTagType(tagType)
       tagType
     }}
@@ -126,7 +126,8 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
 
   @deprecated
-  def setTagNotfLevel: Action[JsValue] = PostJsonAction(RateLimits.ConfigUser, maxBytes = 500) { request =>
+  def setTagNotfLevel: Action[JsValue] = PostJsonAction(
+          RateLimits.ConfigUser, maxBytes = 500) { request =>
     val body = request.body
     val tagLabel = (body \ "tagLabel").as[String]
     val notfLevelInt = (body \ "notfLevel").as[Int]
@@ -138,14 +139,15 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
-  def addRemoveTags: Action[JsValue] = PostJsonAction(RateLimits.EditPost, maxBytes = 5000) { request =>
-    import request.{body, dao}
+  def addRemoveTags: Action[JsValue] = PostJsonAction(
+          RateLimits.EditPost, maxBytes = 5000) { req =>
+    import req.{body, dao}
     val toAddJsVals: Seq[JsValue] = debiki.JsonUtils.parseJsArray(body, "tagsToAdd")
-    val toAdd = toAddJsVals.map(v => JsX.parseTag(v, ifBad = ThrowBadReq))
+    val toAdd = toAddJsVals.map(v => JsX.parseTag(v, IfBadAbortReq))
     val toRemoveJsVals = debiki.JsonUtils.parseJsArray(body, "tagsToRemove")
-    val toRemove = toRemoveJsVals.map(v => JsX.parseTag(v, ifBad = ThrowBadReq))
+    val toRemove = toRemoveJsVals.map(v => JsX.parseTag(v, IfBadAbortReq))
     val affectedPostIds = dao.addRemoveTagsIfAuth(
-          toAdd = toAdd, toRemove = toRemove, request.who)
+          toAdd = toAdd, toRemove = toRemove, req.who)
 
     val storePatch = dao.jsonMaker.makeStorePatchForPosts(
           postIds = affectedPostIds, showHidden = true, dao)

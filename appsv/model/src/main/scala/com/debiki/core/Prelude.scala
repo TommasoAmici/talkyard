@@ -179,34 +179,41 @@ object Prelude {   CLEAN_UP; RENAME // to BugDie and re-export the interesting
     if (test) throwUnimpl(msg)
   }
 
-
-  sealed abstract class DieOrComplain {  RENAME // to ReqAborter (request aborter)
+  type DieOrComplain = MessAborter
+  sealed abstract class MessAborter {
     def require(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
-      if_(!test, errCode, errMsg)
+      if (!test) abort(errCode, errMsg)
     }
-    def if_(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
-      dieIf(test, errCode, errMsg)
+    def abortIf(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
+      if (test) abort(errCode, errMsg)
     }
-    def now(errCode: St, errMsg: St = ""): Nothing = {
+    def abort(errCode: St, errMsg: St = ""): Nothing = {
       die(errCode, errMsg)
     }
   }
 
-  object Die extends DieOrComplain
+  /// For internal errors.
+  object IfBadDie extends MessAborter
 
-  object ThrowNotFound extends DieOrComplain
-
-  object ThrowBadReq extends DieOrComplain {
-    override def if_(test: Bo, errCode: St, errMsg: => St = "Error"): U = {
-      if (test) {
-        throw new BadRequestEx(s"$errMsg [$errCode]")
-      }
-    }
-    override def now(errCode: St, errMsg: St): Nothing = {
+  /// For HTTP requests with bad data or that try to access forbidden things.
+  object IfBadAbortReq extends MessAborter {
+    override def abort(errCode: St, errMsg: St = ""): Nothing = {
       throw new BadRequestEx(s"$errMsg [$errCode]")
     }
   }
 
+
+  @deprecated("Now", "Use ReqAborter instead")
+  object ThrowNotFound extends DieOrComplain
+
+  @deprecated("Now", "Use ReqAborter instead")
+  object ThrowBadReq extends DieOrComplain {
+    override def abort(errCode: St, errMsg: St): Nothing = {
+      throw new BadRequestEx(s"$errMsg [$errCode]")
+    }
+  }
+
+  @deprecated("Now", "Use ReqAborter instead")
   object ThrowForbidden extends DieOrComplain
 
 
@@ -214,10 +221,10 @@ object Prelude {   CLEAN_UP; RENAME // to BugDie and re-export the interesting
   // Bad Request exception, if the data is bad.  However not when doing
   // server internal things — then, die() or some-logger.warn() instead.
   //
-  @deprecated("now", "use DieOrComplain.if_() and now() instead")
+  @deprecated("Now", "Use Aborter.abort() instead")
   def dieOrComplain(errMsg: ErrMsg, doWhat: DieOrComplain): Nothing = {
     doWhat match {
-      case Die => die(errorCode = null, errMsg)  // err code should be incl in errMsg
+      case IfBadDie => die(errorCode = null, errMsg)  // err code should be incl in errMsg
       case ThrowNotFound => throw new NotFoundEx(errMsg)
       case ThrowBadReq => throw new BadRequestEx(errMsg)
       case ThrowForbidden => throw new ForbiddenEx(errMsg)
@@ -226,6 +233,7 @@ object Prelude {   CLEAN_UP; RENAME // to BugDie and re-export the interesting
     }
   }
 
+  @deprecated("Now", "Use Aborter.abortIf() instead")
   def dieOrComplainIf(test: Bo, errMsg: => ErrMsg, ifBad: DieOrComplain): U = {
     if (!test) return
     dieOrComplain(errMsg = errMsg, doWhat = ifBad)

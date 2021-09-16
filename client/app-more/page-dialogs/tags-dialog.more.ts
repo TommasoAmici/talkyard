@@ -44,19 +44,22 @@ interface TagsDiagState {
   isOpen?: Bo;
   editorLoaded?: Bo;
   tagTypes?: TagType[],
-  allTags; // old
-  post?: Post;
+  //allTags; // old
+  //post?: Post;
+  forPost?: Post;
+  forPat?: Pat;
   curTags: Tag[],
   tags: St[], // old
   canAddTag?: Bo;
 }
 
 
-export function openTagsDialog(store: Store, post: Post) {
+export function openTagsDialog(ps: { forPost?: Post, forPat?: Pat, store: Store }) {
+//export function openTagsDialog(store: Store, post: Post) {
   if (!tagsDialog) {
     tagsDialog = ReactDOM.render(TagsDialog(), utils.makeMountNode());
   }
-  tagsDialog.open(store, post);
+  tagsDialog.open(ps); // store, post);
 }
 
 
@@ -64,25 +67,24 @@ const TagsDialog = createComponent({
   displayName: 'TagsDialog',
 
   getInitialState: function () {
-    return {
-      tags: [],
-      tagTypes: [],
-      allTags: [],
-    } as TagsDiagState;
+    return {};
   },
 
   componentWillUnmount: function() {
     this.isGone = true;
   },
 
-  open: function(store: Store, post: Post) {
+  open: function(ps: { forPost?: Post, forPat?: Pat, store: Store }) { // store: Store, post: Post) {
+    dieIf(!!ps.forPat === !!ps.forPost, 'TyE602MWEG5');
     const newState: Partial<TagsDiagState> = {
-      isOpen: true,
-      store,
+      ...ps,  // was: store,
+      curTags: _.clone(ps.forPost?.tags2 || ps.forPat?.pubTags),
     };
     this.setState(newState);
 
-    Server.listTagTypes(ThingType.Pats, '', (tagTypes: TagType[]) => {
+    const listWhatTagTypes = ps.forPost ? ThingType.Posts : ThingType.Pats;
+
+    Server.listTagTypes(listWhatTagTypes, '', (tagTypes: TagType[]) => {
       if (this.isGone) return;
       const newState: Partial<TagsDiagState> = {
         tagTypes,
@@ -94,23 +96,24 @@ const TagsDialog = createComponent({
       if (this.isGone) return;
       this.setState({ allTags: tags });
     }); */
-    Server.loadEditorAndMoreBundles(() => {
-      if (this.isGone || !this.state.isOpen) return;
-      const curState: TagsDiagState = this.state;
+    const curState: TagsDiagState = this.state;
+    if (!curState.editorLoaded) Server.loadEditorAndMoreBundles(() => {
+      if (this.isGone) return;
       const newState: Partial<TagsDiagState> = {
         editorLoaded: true,
-        post: post,
+        //post: post,
         //tags: _.clone(post.tags),  // old
-        curTags: _.clone(post.tags2),
+        //curTags: _.clone(ps.forPost?.tags2 || ps.forPat?.pubTags),
       };
       this.setState(newState);
     });
   },
 
   close: function() {
-    this.setState({ isOpen: false, store: null, post: null, curTags: null, tags: null,
-          editorLoaded: false, tagTypes: null
-    });
+    const newState: Partial<TagsDiagState> = {
+            isOpen: false, store: null, forPost: null, forPat: null,
+            curTags: null, tags: null, tagTypes: null };
+    this.setState(newState);
   },
 
   /* old
@@ -122,6 +125,7 @@ const TagsDialog = createComponent({
   onSelectChange: function(labelsAndValues: any) {
     const state: TagsDiagState = this.state;
     labelsAndValues = labelsAndValues || []; // is null if the clear-all [x] button pressed
+    const origTags = state.forPost?.tags2 || state.forPat?.pubTags;
     const curTags = state.curTags;
     const newCurTags = [];
     for (const labVal of labelsAndValues) {
@@ -130,7 +134,9 @@ const TagsDialog = createComponent({
       const tagId = isTagId && tagOrTagTypeId;
       const tagTypeId = !isTagId && -tagOrTagTypeId;  // undo negate_tagtype_id
       const origTag: Tag | U =
-              _.find(state.post.tags2, t => t.id === tagId || t.tagTypeId === tagTypeId);
+              _.find(origTags, t => t.id === tagId || t.tagTypeId === tagTypeId);
+              //_.find(state.post.tags2, t => t.id === tagId || t.tagTypeId === tagTypeId);
+
       let newTag: Tag | U;
       if (!origTag) {
         // @ifdef DEBUG
@@ -140,7 +146,8 @@ const TagsDialog = createComponent({
           // or just -1, -2, -3, -4? But then how do we know if it's a tag or a tag type
           id: 0, // -tagTypeId,  // 0 // what id? if < 0, will think it's a tag type again, maybe ok?
           tagTypeId,
-          onPostId: state.post.uniqueId,
+          onPostId: state.forPost?.uniqueId,
+          onPatId: state.forPat?.id,
         }
       }
       /*
@@ -194,12 +201,16 @@ const TagsDialog = createComponent({
       canTagWhat: ThingType.Posts,
     };
     Server.createTagType(newTagType, (tagTypeWitId: TagType) => {
+      if (this.isGone) return;
       const state2: TagsDiagState = this.state;
-      if (this.isGone || state.post.uniqueId !== state2.post.uniqueId) return;
+      const differentPat = state.forPat?.id !== state2.forPat?.id;
+      const differentPost = state.forPost?.uniqueId !== state2.forPost?.uniqueId;
+      if (differentPat || differentPost) return;
       const newTag: Tag = {
         id: No.TagId as TagId,
         tagTypeId: tagTypeWitId.id,
-        onPostId: state.post.uniqueId,
+        onPatId: state.forPat?.id,
+        onPostId: state.forPost?.uniqueId,
       }
       this.setState({
         curTags: [...state.curTags, newTag],
@@ -220,7 +231,7 @@ const TagsDialog = createComponent({
     const state: TagsDiagState = this.state;
     // We know if a tag is new, because it then has no tag id.
     const tagsAdded: Tag[] = _.filter(state.curTags, t => t.id === No.TagId);
-    const tagsBefore = state.post.tags2 || [];
+    const tagsBefore = state.forPost?.tags2 || state.forPat?.pubTags || [];
     const tagsRemoved: Tag[] = [];
     for (const tagBef of tagsBefore) {
       const tagNow = _.find(state.curTags, t => t.id === tagBef.id);
@@ -239,16 +250,24 @@ const TagsDialog = createComponent({
     let title: St | U;
     let content: RElm | U;
 
-    if (!state.isOpen) {
-      // Nothing.
+    if (!state.curTags) {
+      // Not open.
     }
     else if (!state.editorLoaded || !state.tagTypes) {
       content = r.p({}, t.Loading);
     }
     else {
-      const post: Post = state.post;
-      dieIf(!post, 'EsE4GK0IF2');
-      title = post.nr === BodyNr ? "Page tags" : "Post tags";   // I18N tags, here and below
+      // I18N tags dialog, here and below.
+      if (state.forPost) {
+        title = state.forPost.nr === BodyNr ? "Page tags" : "Post tags";
+      }
+      else if (state.forPat) {
+        title = (state.forPat.isGroup ? "Group Member" : "User") + " Badges";
+      }
+      else {
+        die('TyE4GK0IF2');
+      }
+
       content =
         r.div({ className: 'esTsD_CreateTs' },
           rb.ReactSelect({ multi: true,
@@ -262,18 +281,21 @@ const TagsDialog = createComponent({
             PatternInput({ label: "Create tag:", ref: 'newTagInput', placeholder: "tag-name",
               onChangeValueOk: (value, ok) => this.setCanAddTag(ok),
               help: "Type a new tag name.",
-              notRegex: /\s/, notMessage: "No spaces",
-              // Sync with Scala and database. [7JES4R3]
+              // Bad chars, sync w Scala and database:  [7JES4R3-2]
+              // """.*[^\p{Alnum} !?&%_.:=/~+*-].*""".r
               //notRegexTwo: /[,;\|\?!\*'"]/
-              notRegexTwo: /[!"#$%&'()*+,\/;<=>?@[\]^`{|}\\]/,
-              notMessageTwo: "No weird chars like ',&?*' please",
+              //notRegexTwo: /[!"#$%&'()*+,\/;<=>?@[\]^`{|}\\]/,
+              notRegexTwo: /["#$'(),;<>@[\]^`{|}\\]/,
+              notMessageTwo: "No weird chars like ',#[{(' please",
             }),
             Button({ onClick: this.createAndAddTag, disabled: !state.canAddTag },
-              "Create and add tag")));
+              "Create and add tag"),
+            r.span({ className: 'help-block' },
+              "(You need to click Save too, to the right.)")));
     }
 
     return (
-      Modal({ show: this.state.isOpen, onHide: this.close, dialogClassName: 'esTsD' },
+      Modal({ show: !!content, onHide: this.close, dialogClassName: 'esTsD' },
         ModalHeader({}, ModalTitle({}, title)),
         ModalBody({}, content),
         ModalFooter({},

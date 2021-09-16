@@ -520,6 +520,8 @@ declare namespace debiki2 {
       user: Pat, store?: Store, settings?: SettingsVisibleClientSide,
       makeLink?: Bo, onClick?: Ay, avoidFullName?: Bo });
 
+  function TagList(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U;
+
   var FacebookLogoImage;
 
   // More stuff, place where?

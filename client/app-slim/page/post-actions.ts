@@ -436,6 +436,7 @@ export const PostActions = createComponent({
     }
 
     let tagList;
+    /*
     if (post.tags2 && post.tags2.length) {
       const tags = post.tags2.map((tag: Tag) => {
         const tagType = store.tagTypes?.[tag.tagTypeId];
@@ -446,7 +447,7 @@ export const PostActions = createComponent({
                   `Tag id: ${tag.id}, type: ${tag.tagTypeId}`)));
       });
       tagList = r.ul({ className: 'esPA_Ts' }, tags);
-    }
+    } */
     /* old
     if (post.tags && post.tags.length) {
       const tags = post.tags.map((label) => {
@@ -756,8 +757,9 @@ const MoreDropdownModal = createComponent({
     this.close();
   },
 
-  openTagsDialog: function(event) {
-    morebundle.openTagsDialog(this.state.store, this.state.post);
+  openTagsDialog: function() {
+    const state = this.state;
+    morebundle.openTagsDialog({ forPost: state.post, store: state.store });
     this.close();
   },
 

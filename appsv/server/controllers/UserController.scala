@@ -126,6 +126,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
       if (maySeeActivity(userId, request.requester, request.dao)) anyStatsJson
       else JsNull */
     userJson += "anyUserStats" -> anyStatsJson
+    // pubTags  ?
     userJson += "groupIdsMaySee" -> JsArray(pptGroupIds.map(id => JsNumber(id)))
     OkSafeJson(Json.obj(
       "user" -> userJson,
@@ -1308,7 +1309,8 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
   def listGroupMembers(groupId: UserId): Action[Unit] =
         GetActionRateLimited(RateLimits.ReadsFromDb) { request =>
     val maybeMembers = request.dao.listGroupMembersIfReqrMaySee(groupId, request.requesterOrUnknown)
-    val membersJson: JsValue = maybeMembers.map(ms => JsArray(ms map JsUser)).getOrElse(JsFalse)
+    val membersJson: JsValue = maybeMembers.map(
+          ms => JsArray(ms.map(JsUser(_)))) getOrElse JsFalse
     OkSafeJsValue(membersJson)
   }
 

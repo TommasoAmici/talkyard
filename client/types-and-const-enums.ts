@@ -168,8 +168,8 @@ const enum TopicFilters {
 
 
 const enum ThingType {
-  Pats = 31,
-  Posts = 224,
+  Pats = 7,
+  Posts = 56,
 }
 
 const enum No {

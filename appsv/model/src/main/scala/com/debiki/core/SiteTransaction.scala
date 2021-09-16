@@ -275,6 +275,7 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def addTag(tag: Tag): U
   def removeTags(tags: Seq[Tag]): U
   def loadTagsByPatId(patIds: PatId): Seq[Tag]
+  def loadTagsForPages(pageIds: Iterable[PageId]): Map[PageId, ImmSeq[Tag]]
   def loadTagsForPost2(postId: PostId): Any = ??? //TagsAndBadgesSinglePosts =
   //  loadTagsForPostsAndAuthors(Seq(postId)).getOrElse(postId, Nil)
   def loadPostTagsAndAuthorBadges(postIds: Iterable[PostId]): TagsAndBadges

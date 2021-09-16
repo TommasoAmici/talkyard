@@ -8,10 +8,11 @@ case class TagType(
   urlSlug_unimpl: Opt[St], // later
   dispName: St,
   createdById: PatId,
-)(ifBad: DieOrComplain) {
-  import ifBad.require
+)(aborter: MessAborter) {
+  import aborter.require
   require(id >= 0, "TyE4MR507")
   require(dispName.isTrimmedNonEmpty, "TyE06MWEP3")
+  require(canTagWhat == 7 || canTagWhat == 56, "TyE4062MW5", "canTagWhat must be 7 or 56")
 }
 
 
@@ -21,8 +22,8 @@ case class Tag(
   parentTagId_unimpl: Opt[TagId], //  later
   onPatId: Opt[PatId],
   onPostId: Opt[PostId],
-)(ifBad: DieOrComplain) {
-  import ifBad.require
+)(aborter: MessAborter) {
+  import aborter.require
   require(id >= 0, "TyE5GMRA25")
   require(tagTypeId >= 0, "TyE5GMRA26")
   require(onPatId.isDefined != onPostId.isDefined, "TyE2J3MRD2")
@@ -34,7 +35,7 @@ object Tag {
 
   /*
   def create(
-    ifBad: DieOrComplain,
+    ifBad: Aborter,
     id: TagId,
     tagTypeId: TagTypeId,
     parentTagId_unimpl: Opt[TagId], //  later

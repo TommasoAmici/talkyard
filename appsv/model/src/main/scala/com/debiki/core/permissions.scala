@@ -44,7 +44,7 @@ case class PatPerms (
 
 
 object PatPerms {  REFACTOR // add ifBad: Complain  to "all" case classes  instead?
-  def empty: PatPerms = create(ifBad = Die)
+  def empty: PatPerms = create(ifBad = IfBadDie)
 
   def create(ifBad: DieOrComplain,
         maxUploadBytes: Opt[i32] = None,

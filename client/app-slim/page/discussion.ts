@@ -1762,6 +1762,28 @@ export const PostHeader = createComponent({
       inReplyTo = ReplyReceivers({ store, post, comma: true });
     }
 
+    const tagList: RElm | U = TagList({ forPost: post, store });
+    /*
+    let tagList: RElm[] | U;
+    if (post.tags2 && post.tags2.length) {
+      const canEditTags = user_isStaffOrCoreMember(me);  // for now
+      const canEditAnyClass = !canEditTags ? '' : ' c_Tags-CanEdAny';
+      const canEditThisClass = !canEditTags ? '' : ' c_Tag-CanEd';
+      const onClick = !canEditTags ? null : () => {
+        morebundle.openTagsDialog(store, post);
+      };
+      const tags = post.tags2.map((tag: Tag) => {
+        const tagType = store.tagTypes?.[tag.tagTypeId];
+        return (
+            r.li({ key: tag.id },
+              r.a({ className: 'c_Tag' + canEditThisClass, onClick },  // was class: esTg   
+                tagType?.dispName ||
+                    // In case there's some bug so the tag type wasn't found.
+                    `Tag id: ${tag.id}, type: ${tag.tagTypeId}`)));
+      });
+      tagList = r.ul({ className: 'c_Tags' + canEditAnyClass }, tags);  // esPA_Ts
+    }*/
+
     const timeClass = 'esP_H_At';
 
     return (
@@ -1779,6 +1801,7 @@ export const PostHeader = createComponent({
           editInfo,
           inReplyTo,
           toggleCollapsedButton,
+          tagList,
           bookmark,
           unreadMark,
           this.props.stuffToAppend));

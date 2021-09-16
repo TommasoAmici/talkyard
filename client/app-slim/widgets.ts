@@ -368,6 +368,50 @@ export function UserName(props: {
 }
 
 
+
+
+export function TagList(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U {
+  const store: Store = ps.store;
+  const me: Me = store.me;
+  const tags = (ps.forPost && ps.forPost.tags2) || (ps.forPat && ps.forPat.pubTags);
+
+  const canEditTags = user_isStaffOrCoreMember(me);  // for now
+  const canEditAnyClass = !canEditTags ? '' : ' c_TagL-CanEdAny';
+  const canEditThisClass = !canEditTags ? '' : ' c_TagL_Tag-CanEd';
+
+  const thereAreTags = tags && tags.length;
+  if (!thereAreTags && !canEditTags)
+    return;
+
+  const maybeOpenTagsDiag = !canEditTags ? null : () => {
+    morebundle.openTagsDialog(ps);
+  }
+
+  let tagElms: RElm[] = [];
+  if (thereAreTags) {
+    tagElms = tags.map((tag: Tag) => {
+      const tagType = store.tagTypes?.[tag.tagTypeId];
+      return (
+          r.li({ key: tag.id },
+            r.a({ className: 'c_TagL_Tag' + canEditThisClass, onClick: maybeOpenTagsDiag },   // was class: esTg   
+              tagType?.dispName ||
+                  // In case there's some bug so the tag type wasn't found.
+                  `Tag id: ${tag.id}, type: ${tag.tagTypeId}`)));
+    });
+  }
+
+  if (canEditTags) {
+    tagElms.push(r.li({ key: '+' },
+        Button({ onClick: maybeOpenTagsDiag, className: 'c_TagL_AddB' }, '+ ...' )))
+  }
+
+  const tagList = r.ul({ className: 'c_TagL' + canEditAnyClass }, tagElms);   // was: esPA_Ts
+  return tagList;
+}
+
+
+
+
 export interface InstaDiagProps {
   diagClassName?: St;
   titleClassName?: St;

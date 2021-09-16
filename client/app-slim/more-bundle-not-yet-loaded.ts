@@ -162,9 +162,9 @@ export function openShareDialog(post: Post, button) {
 }
 
 
-export function openTagsDialog(store: Store, post: Post) {
+export function openTagsDialog(ps: { forPost?: Post, forPat?: Pat, store: Store }) {
   Server.loadMoreScriptsBundle(() => {
-    debiki2.pagedialogs.openTagsDialog(store, post);
+    debiki2.pagedialogs.openTagsDialog(ps);
   });
 }
 

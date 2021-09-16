@@ -1,0 +1,44 @@
+// Tags
+
+.c_TagL
+  &,
+  & li
+    display: inline;
+    margin: 0;
+
+.c_TagL_Tag,
+.c_TagL_AddB
+  display: inline-block;
+  box-shadow: 1px 1px 4px hsl(0 0% 36%);
+  color: hsl(0 0% 25%);
+  background: white;
+  line-height: 1;
+  margin: 2px 4px;
+  padding: 2px 6px 1px;
+  min-width: 30px;
+  text-align: center;
+
+  // or?
+  border: 1px solid hsl(0 0% 80%);
+  box-shadow: 1px 1px 3px hsl(0deg 0% 60%);
+
+  // or?
+  border: 1px solid hsl(0 0% 79%);
+  box-shadow: 2px 2px 4px hsl(0deg 0% 84%);
+
+  &:hover
+    cursor: pointer;
+    text-decoration: none; // no <a> underline
+
+
+.c_TagL-CanEdAny:hover
+  background: hsl(207 100% 98%);
+  .c_TagL_Tag-CanEd,
+  .c_TagL_AddB
+    background: hsl(207 100% 96%);
+    color: black;
+
+
+.c_TagL_AddB
+  vertical-align: baseline;
+  box-shadow: none;

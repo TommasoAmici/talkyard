@@ -378,13 +378,19 @@ object ForumController {
   def makeTopicsResponse(categoryId: Option[CategoryId], topics: Seq[PagePathAndMeta], dao: SiteDao): Result = {
     val category: Option[Category] = categoryId.flatMap(dao.getCategory)
     val pageStuffById = dao.getPageStuffById(topics.map(_.pageId))
-    val users = dao.getUsersAsSeq(pageStuffById.values.flatMap(_.userIds))
+    val pageStuffList = pageStuffById.values
+NEXT !!!@@@###
+    // not a set??
+    val users = dao.getUsersAsSeq(pageStuffList.flatMap(_.userIds))
+
+    val tagTypes = dao.getTagTypes()
     val topicsJson: Seq[JsObject] = topics.map(topicToJson(_, pageStuffById))
     val json = Json.obj(   // LoadTopicsResponse
       "categoryId" -> JsNumberOrNull(categoryId),
       "categoryParentId" -> JsNumberOrNull(category.flatMap(_.parentId)),
       "topics" -> topicsJson,
-      "users" -> users.map(JsUser))
+      "tagTypes" -> JsArray(), // soon!
+      "users" -> users.map(JsUser(_)))
     OkSafeJson(json)
   }
 
@@ -416,6 +422,7 @@ object ForumController {
       "url" -> urlPath,
       // Private chats & formal messages might not belong to any category.
       "categoryId" -> JsNumberOrNull(page.categoryId),
+      "pubTags" -> JsArray(topicStuff.tags map JsTag),
       "pinOrder" -> JsNumberOrNull(page.pinOrder),
       "pinWhere" -> JsNumberOrNull(page.pinWhere.map(_.toInt)),
       "excerpt" -> JsStringOrNull(topicStuff.bodyExcerpt),

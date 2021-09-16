@@ -36,6 +36,7 @@ case class PageStuff(
   bodyExcerpt: Option[String],
   // Need not cache these urls per server origin? [5JKWBP2]
   bodyImageUrls: immutable.Seq[String],
+  tags: ImmSeq[Tag],
   popularRepliesImageUrls: immutable.Seq[String],
   authorUserId: UserId,  // RENAME to just authorId
   lastReplyerId: Option[UserId],
@@ -148,6 +149,9 @@ trait PageStuffDao {
     val popularRepliesByPageId: Map[PageId, immutable.Seq[Post]] =
       transaction.loadPopularPostsByPage(pageIds, limitPerPage = 10, exclOrigPost = true)
 
+    val tagsByPageId = transaction.loadTagsForPages(pageIds)
+    // Where cache tag types? In TagsDao?
+
     for (pageMeta <- pageMetasById.values) {
       val pageId = pageMeta.pageId
       val anyBody = titlesAndBodies.find(post => post.pageId == pageId && post.nr == BodyNr)
@@ -171,7 +175,7 @@ trait PageStuffDao {
         JsonMaker.htmlToExcerpt(html, length, firstParagraphOnly)
       })
 
-      val summary = PageStuff(
+      val pageStuff = PageStuff(
         pageId,
         pageMeta,
         title = anyTitle.flatMap(_.approvedSource) getOrElse "(No title)",
@@ -179,12 +183,13 @@ trait PageStuffDao {
         currTitleSource = anyTitle.map(_.currentSource),
         bodyExcerpt = anyExcerpt.map(_.text),
         bodyImageUrls = anyExcerpt.map(_.firstImageUrls).getOrElse(Vector.empty),
+        tags = tagsByPageId.getOrElse(pageId, Nil),
         popularRepliesImageUrls = popularImageUrls,
         authorUserId = pageMeta.authorId,
         lastReplyerId = pageMeta.lastApprovedReplyById,
         frequentPosterIds = pageMeta.frequentPosterIds)
 
-      stuffById += pageMeta.pageId -> summary
+      stuffById += pageMeta.pageId -> pageStuff
     }
 
     stuffById

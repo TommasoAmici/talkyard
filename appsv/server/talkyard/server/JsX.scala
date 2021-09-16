@@ -163,10 +163,10 @@ object JsX {   RENAME // to JsonPaSe
 
 
   def JsUserOrNull(user: Option[Participant]): JsValue =  // RENAME to JsParticipantOrNull
-    user.map(JsUser).getOrElse(JsNull)
+    user.map(JsUser(_)).getOrElse(JsNull)
 
 
-  def JsUser(user: Participant): JsObject = {  // Typescript: Participant, RENAME to JsPat
+  def JsUser(user: Pat, tags: Seq[Tag] = Nil): JsObject = {  // Typescript: Pat, RENAME to JsPat
     var json = Json.obj(
       "id" -> JsNumber(user.id),
       "username" -> JsStringOrNull(user.anyUsername),
@@ -196,6 +196,9 @@ object JsX {   RENAME // to JsonPaSe
     if (user.isGone) {
       json += "isGone" -> JsTrue
     }
+    if (tags.nonEmpty) {
+      json += "pubTags" -> JsArray(tags map JsTag) // tags.map(_.tagTypeId)
+    }
     json
   }
 
@@ -212,6 +215,7 @@ object JsX {   RENAME // to JsonPaSe
   def JsUserInclDetails(user: UserInclDetails,
         usersById: Map[UserId, User], // CLEAN_UP remove, send back a user map instead
         groups: immutable.Seq[Group],
+        tags: Seq[Tag] = Nil,
         callerIsAdmin: Boolean, callerIsStaff: Boolean = false, callerIsUserHerself: Boolean = false,
         anyStats: Option[UserStats] = None, inclPasswordHash: Boolean = false)
       : JsObject = {
@@ -632,8 +636,8 @@ object JsX {   RENAME // to JsonPaSe
   }
 
 
-  def parseTagType(jsVal: JsValue, createdById: Opt[PatId], dieOrComplain: DieOrComplain)
-          : TagType = {
+  def parseTagType(jsVal: JsValue, createdById: Opt[PatId])(
+          aborter: MessAborter): TagType = {
     val jOb = asJsObject(jsVal, "tag type")
     val id = parseInt32(jOb, "id")
     val canTagWhat = parseInt32(jOb, "canTagWhat")
@@ -641,7 +645,7 @@ object JsX {   RENAME // to JsonPaSe
     val createdByIdInJson = parseOptInt32(jOb, "createdById")
     createdById foreach { id =>
       if (createdByIdInJson.isSomethingButNot(id)) {
-        dieOrComplain.now("TyE2MW04MEFQ2", "createdById in JSON is wrong")
+        aborter.abort("TyE2MW04MEFQ2", "createdById in JSON is wrong")
       }
     }
     val byId = createdById.orElse(createdByIdInJson) getOrDie "TyE603MRAI5"
@@ -650,7 +654,7 @@ object JsX {   RENAME // to JsonPaSe
           canTagWhat = canTagWhat,
           urlSlug_unimpl = None,
           dispName = dispName,
-          createdById = byId)(dieOrComplain)
+          createdById = byId)(aborter)
   }
 
 
@@ -663,7 +667,7 @@ object JsX {   RENAME // to JsonPaSe
   }
 
 
-  def parseTag(jsVal: JsValue, ifBad: DieOrComplain): Tag = {
+  def parseTag(jsVal: JsValue, aborter: MessAborter): Tag = {
     val jOb = asJsObject(jsVal, "tag")
     val id = parseInt32(jOb, "id")
     val tagTypeId = parseInt32(jOb, "tagTypeId")
@@ -673,7 +677,7 @@ object JsX {   RENAME // to JsonPaSe
           tagTypeId = tagTypeId,
           parentTagId_unimpl = None,
           onPatId = onPatId,
-          onPostId = onPostId)(ifBad)
+          onPostId = onPostId)(aborter)
   }
 
 

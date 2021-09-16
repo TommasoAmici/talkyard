@@ -757,6 +757,7 @@ class JsonMaker(dao: SiteDao) {
 
     val site = if (requester.isStaffOrCoreMember) dao.getSite else None
 
+    // pubTags?
     dao.readOnlyTransaction { tx =>
       requestersJsonImpl(requester, anyPageId = None, watchbarWithTitles,
             RestrTopicsCatsLinks(JsArray(), Nil, Nil, Nil),
@@ -921,6 +922,7 @@ class JsonMaker(dao: SiteDao) {
       "myCatsTagsSiteNotfPrefs" -> JsArray(myCatsTagsSiteNotfPrefs.map(JsPageNotfPref)),
       "groupsCatsTagsSiteNotfPrefs" -> JsArray(groupsCatsTagsSiteNotfPrefs.map(JsPageNotfPref)),
       "myGroupIds" -> JsArray(myGroupsEveryoneLast.map(g => JsNumber(g.id))),
+      "pubTags" -> JsArray(), // tags2 map JsTag),
       "myDataByPageId" -> ownDataByPageId,
       "marksByPostId" -> JsObject(Nil))
 
@@ -991,10 +993,11 @@ class JsonMaker(dao: SiteDao) {
     topics.foreach(_.meta.addUserIdsTo(userIds))
     val users = dao.getUsersAsSeq(userIds)
 
+    // pubTags?
     RestrTopicsCatsLinks(
           categoriesJson = categoriesJson,
           topicsJson = topics.map(ForumController.topicToJson(_, pageStuffById)),
-          topicParticipantsJson = users.map(JsUser),
+          topicParticipantsJson = users.map(JsUser(_)),
           internalBacklinksJson = internalBacklinksJson)
   }
 
@@ -1050,8 +1053,9 @@ class JsonMaker(dao: SiteDao) {
             Nil), renderer)
     }
 
+    // pubTags?
     val authors = transaction.loadParticipants(posts.map(_.createdById).toSet)
-    val authorsJson = JsArray(authors map JsUser)
+    val authorsJson = JsArray(authors.map(JsUser(_)))
     (JsObject(postIdsAndJson), authorsJson)
   }
 
@@ -1241,7 +1245,7 @@ class JsonMaker(dao: SiteDao) {
     Json.obj(
       "appVersion" -> appVersion,
       "pageVersionsByPageId" -> pageVersionsByPageIdJson,
-      "usersBrief" -> users.map(JsUser),
+      "usersBrief" -> users.map(JsUser(_)),
       "postsByPageId" -> postsByPageIdJson)
   }
 
@@ -1881,7 +1885,8 @@ object JsonMaker {
       "likeScore" -> JsNumber(decimal(post.likeScore)),
       "childNrsSorted" -> JsArray(howRender.childrenSorted.map(reply => JsNumber(reply.nr))),
       "sanitizedHtml" -> JsStringOrNull(anySanitizedHtml),
-      "tags2" -> JsArray(tags2 map JsTag),
+      "tags2" -> JsArray(tags2 map JsTag),  // REMOVE use pubTags instead, next line
+      "pubTags" -> JsArray(tags2 map JsTag),
       // old:
       "tags" -> JsArray(tags.toSeq.map(JsString)))
 

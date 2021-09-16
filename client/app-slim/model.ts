@@ -395,7 +395,7 @@ interface Post {
   unsafeSource?: string;
   sanitizedHtml?: string;
   tags?: string[];
-  tags2?: Tag[];
+  tags2?: Tag[];  // RENAME to pubTags
   numPendingFlags?: number;
   numHandledFlags?: number;
 }
@@ -1298,7 +1298,8 @@ interface Pat {   // Guest or Member, and Member = group or user
   avatarSmallHashPath?: string;
   isMissing?: boolean;
   isGone?: boolean;
-  badges?: Tag[];  // ?? badges that should be displayed almost always
+  //badges?: Tag[];  // ?? badges that should be displayed almost always
+  pubTags?: Tag[];
 }
 
 type PpsById = { [ppId: number]: Participant };  // RENAME to PatsById

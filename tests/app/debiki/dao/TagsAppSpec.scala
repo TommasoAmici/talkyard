@@ -74,13 +74,13 @@ class TagsDaoSpec extends AnyFreeSpec with must.Matchers {
         anyProbem.map(_.code) mustBe Some("TyEMAXTAGLEN_")
       }
 
-      "whitespace" in {
+      "whitespace is fine" in {
         val anyProbem = TagsDao.findTagLabelProblem("z z")
-        anyProbem.map(_.code) mustBe Some("TyETAGBLANK_")
+        anyProbem mustBe empty
       }
 
       "bad punct" in {
-        for (c <- """!"#$%&'()*+,/;<=>?@[\]^`{|}""") {  // now '/' is ok
+        for (c <- """"#$'(),;<>@[\]^`{|}""") {   // e.g. '/:=' and space are fine
           val anyProbem = TagsDao.findTagLabelProblem("badpunct_" + c)
           anyProbem.map(_.message).getOrElse("") must contain(c)
           anyProbem.map(_.code) mustBe Some("TyETAGPUNCT_")

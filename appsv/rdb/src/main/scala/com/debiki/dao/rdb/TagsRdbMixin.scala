@@ -117,7 +117,25 @@ trait TagsRdbMixin extends SiteTx {
           select * from tags_t where site_id_c = ? and on_pat_id_c = ? """
     runQueryFindMany(query, List(siteId.asAnyRef, patId.asAnyRef), parseTag)
   }
-
+NEXT !!!@@@###
+  def loadTagsForPages(pageIds: Iterable[PageId]): Map[PageId, ImmSeq[Tag]] = {
+    val values = siteId.asAnyRef :: pageIds.toList
+    val query = s"""
+          select po.page_id, t.* from tags_t t
+              inner join posts3 po
+                  on po.site_id = t.site_id_c
+                  and po.site_id = ?  -- this and...
+                  and po.page_id in (${ makeInListFor(pageIds) })
+                  and po.unique_post_id = t.on_post_id_c
+                  and po.nr = $BodyNr
+          -- where t.site_id = ?  -- this should be equivalent
+          """
+    runQueryBuildMultiMap(query, values, rs => {
+      val pageId = getString(rs, "page_id")
+      val tag = parseTag(rs)
+      pageId -> tag
+    })
+  }
 
   def loadTagsToRenderSmallPage(pageId: PageId): Seq[Tag] = {
     // Small page, we can load all tags. [large_pages]
@@ -276,7 +294,7 @@ trait TagsRdbMixin extends SiteTx {
           canTagWhat = getInt(rs, "can_tag_what_c"),
           urlSlug_unimpl = getOptString(rs, "url_slug_c"),
           dispName = getString(rs, "disp_name_c"),
-          createdById = getInt(rs, "created_by_id_c"))(ifBad = Die)
+          createdById = getInt(rs, "created_by_id_c"))(IfBadDie)
   }
 
   private def parseTag(rs: j_ResultSet): Tag = {
@@ -284,7 +302,7 @@ trait TagsRdbMixin extends SiteTx {
           tagTypeId = getInt(rs, "tagtype_id_c"),
           parentTagId_unimpl = getOptInt32(rs, "parent_tag_id_c"),
           onPatId = getOptInt32(rs, "on_pat_id_c"),
-          onPostId = getOptInt32(rs, "on_post_id_c"))(ifBad = Die)
+          onPostId = getOptInt32(rs, "on_post_id_c"))(IfBadDie)
   }
 
 }

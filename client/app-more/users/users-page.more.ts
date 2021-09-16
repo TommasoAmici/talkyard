@@ -411,6 +411,8 @@ const AvatarAboutAndButtons = createComponent({
     const thatIsYou = !isMe ? null :
       r.span({ className: 'esProfile_isYou' }, t.upp.you);
 
+    const pubTags = TagList({ forPat: user, store });
+
     const bio = !!user.bio &&
         r.div({ className: 's_UP_Ab_Bio' }, user.bio);
 
@@ -470,6 +472,7 @@ const AvatarAboutAndButtons = createComponent({
           adminButton,
           r.h1({ className: 'esUP_Un' }, user.username, thatIsYou, isAGroup),
           r.h2({ className: 'esUP_FN' }, user.fullName, isWhatInfo),
+          pubTags,
           bio,
           websteUrl,
           location,
