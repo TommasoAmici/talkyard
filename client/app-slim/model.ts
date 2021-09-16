@@ -789,6 +789,7 @@ interface Topic {
   pinOrder?: number;
   pinWhere?: PinPageWhere;
   excerpt?: string;
+  pubTags?: Tag[];
   firstImageUrls?: string[];
   popularRepliesImageUrls?: string[];
   popularityScore?: number;
@@ -2241,9 +2242,12 @@ interface AuthnResponse {
 type LoadPageIdsUrlsResponse = PageIdsUrls[];
 
 
+type TagTypesById = { [id: string]: TagType };
+
 interface LoadTopicsResponse {
   categoryId?: CategoryId;
   categoryParentId?: CategoryId;
+  tagTypesById: TagTypesById;
   topics: Topic[];
   users: Participant[];
 }

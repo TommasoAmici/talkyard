@@ -55,6 +55,9 @@ type Z = 0 | false | '' | null | undefined | void;  // don't incl [] or {}
 // or can return a boolean. So, boolean or falsy:
 type BoZ = Bo | Z;
 
+// Void function.
+type VoFn = () => Vo;
+
 type NU  = null | undefined;
 type NUV = null | undefined | void;
 

@@ -2315,7 +2315,7 @@ trait UserDao {
         }
         UsersOnlineStuff(
           users,
-          usersJson = JsArray(users.map(JsX.JsUser)),
+          usersJson = JsArray(users.map(JsX.JsUser(_))),
           numStrangers = numStrangers)
       }
     })

@@ -370,12 +370,64 @@ export function UserName(props: {
 
 
 
-export function TagList(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U {
+export function TagListLive(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U {
   const store: Store = ps.store;
   const me: Me = store.me;
   const tags = (ps.forPost && ps.forPost.tags2) || (ps.forPat && ps.forPat.pubTags);
 
   const canEditTags = user_isStaffOrCoreMember(me);  // for now
+
+  const thereAreTags = tags && tags.length;
+  if (!thereAreTags && !canEditTags)
+    return;
+
+  const maybeOpenTagsDiag = !canEditTags ? null : () => {
+    morebundle.openTagsDialog(ps);
+  }
+  return TagList({ tags, tagTypes: store.tagTypes, onClick: maybeOpenTagsDiag })
+}
+
+
+
+export function TagList(ps: { tags?: Tag[], tagTypes?: TagTypesById, onClick?: () => Vo }): RElm | U {
+  const anyTags: Tag[] | U = ps.tags;
+  const tagTypes: TagTypesById = ps.tagTypes || {};
+  const thereAreTags = anyTags && anyTags.length;
+  const canEditTags = ps.onClick;
+
+  let tagElms: RElm[] = [];
+  const canEditAnyClass = !canEditTags ? '' : ' c_TagL-CanEdAny';
+  const canEditThisClass = !canEditTags ? '' : ' c_TagL_Tag-CanEd';
+
+  if (thereAreTags) {
+    tagElms = anyTags.map((tag: Tag) => {
+      const tagType = tagTypes[tag.tagTypeId];
+      return (
+          r.li({ key: tag.id },
+            r.a({ className: 'c_TagL_Tag' + canEditThisClass, onClick: ps.onClick },   // was class: esTg   
+              tagType?.dispName ||
+                  // In case there's some bug so the tag type wasn't found.
+                  `Tag id: ${tag.id}, type: ${tag.tagTypeId}`)));
+    });
+  }
+
+  if (canEditTags) {
+    tagElms.push(r.li({ key: '+' },
+        Button({ onClick: ps.onClick, className: 'c_TagL_AddB' }, '+ ...' )))
+  }
+
+  return r.ul({ className: 'c_TagL' + canEditAnyClass }, tagElms);   // was: esPA_Ts
+}
+
+
+/*
+export function TagList(ps: { forPost?: Post, forPat?: Pat, tags?: Tag[],
+        store?: Store, tagTypes?: TagTypesById }): RElm | U {
+  const store: Store | U = ps.store;
+  const me: Me | U = store && store.me;
+  const tags: Tag[] | U = (ps.forPost && ps.forPost.tags2) || (ps.forPat && ps.forPat.pubTags) || ps.tags;
+
+  const canEditTags = (ps.forPost || ps.forPat) && user_isStaffOrCoreMember(me);  // for now
   const canEditAnyClass = !canEditTags ? '' : ' c_TagL-CanEdAny';
   const canEditThisClass = !canEditTags ? '' : ' c_TagL_Tag-CanEd';
 
@@ -387,10 +439,11 @@ export function TagList(ps: { forPost?: Post, forPat?: Pat, store: Store }): REl
     morebundle.openTagsDialog(ps);
   }
 
+  const tagTypes = ps.tagTypes || store && store.tagTypes || {};
   let tagElms: RElm[] = [];
   if (thereAreTags) {
     tagElms = tags.map((tag: Tag) => {
-      const tagType = store.tagTypes?.[tag.tagTypeId];
+      const tagType: TagType | U = tagTypes[tag.tagTypeId];
       return (
           r.li({ key: tag.id },
             r.a({ className: 'c_TagL_Tag' + canEditThisClass, onClick: maybeOpenTagsDiag },   // was class: esTg   
@@ -407,8 +460,7 @@ export function TagList(ps: { forPost?: Post, forPat?: Pat, store: Store }): REl
 
   const tagList = r.ul({ className: 'c_TagL' + canEditAnyClass }, tagElms);   // was: esPA_Ts
   return tagList;
-}
-
+} */
 
 
 

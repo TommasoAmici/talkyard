@@ -379,17 +379,19 @@ object ForumController {
     val category: Option[Category] = categoryId.flatMap(dao.getCategory)
     val pageStuffById = dao.getPageStuffById(topics.map(_.pageId))
     val pageStuffList = pageStuffById.values
-NEXT !!!@@@###
+
     // not a set??
     val users = dao.getUsersAsSeq(pageStuffList.flatMap(_.userIds))
 
-    val tagTypes = dao.getTagTypes()
+    val tagTypeIdsList = pageStuffList.flatMap(_.tags.map(_.tagTypeId))
+    val tagTypes = dao.getTagTypes(tagTypeIdsList.toSet)
+
     val topicsJson: Seq[JsObject] = topics.map(topicToJson(_, pageStuffById))
     val json = Json.obj(   // LoadTopicsResponse
       "categoryId" -> JsNumberOrNull(categoryId),
       "categoryParentId" -> JsNumberOrNull(category.flatMap(_.parentId)),
       "topics" -> topicsJson,
-      "tagTypes" -> JsArray(), // soon!
+      "tagTypesById" -> JsObject(tagTypes.map(tt => tt.id.toString -> JsTagType(tt))),
       "users" -> users.map(JsUser(_)))
     OkSafeJson(json)
   }

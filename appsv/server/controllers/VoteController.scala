@@ -145,7 +145,7 @@ class VoteController @Inject()(cc: ControllerComponents, edContext: EdContext)
     }
     val json = Json.obj(
       "numVoters" -> voters.size, // currently all voters always loaded [1WVKPW02]
-      "someVoters" -> JsArray(voters map JsUser))
+      "someVoters" -> JsArray(voters.map(JsUser(_))))
     OkSafeJson(json)
   }
 }

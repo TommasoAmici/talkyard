@@ -65,7 +65,7 @@ class ModerationController @Inject()(cc: ControllerComponents, edContext: EdCont
         "reviewTaskCounts" -> Json.obj(
           "numUrgent" -> reviewTaskCounts.numUrgent,
           "numOther" -> reviewTaskCounts.numOther),
-        "users" -> usersById.values.map(JsUser),
+        "users" -> usersById.values.map(JsUser(_)),
         "pageMetasBrief" -> pageMetaById.values.map(JsPageMetaBrief)))
   }
 

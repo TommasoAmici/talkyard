@@ -1762,7 +1762,7 @@ export const PostHeader = createComponent({
       inReplyTo = ReplyReceivers({ store, post, comma: true });
     }
 
-    const tagList: RElm | U = TagList({ forPost: post, store });
+    const tagList: RElm | U = TagListLive({ forPost: post, store });
     /*
     let tagList: RElm[] | U;
     if (post.tags2 && post.tags2.length) {

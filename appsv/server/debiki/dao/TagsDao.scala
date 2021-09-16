@@ -68,6 +68,11 @@ trait TagsDao {
   this: SiteDao =>
 
 
+  def getTagTypes(tagTypeIds: Set[TagTypeId]): Seq[TagType] =
+    // For now
+    readTx(_.loadAllTagTypes()).filter(tt => tagTypeIds.contains(tt.id))
+
+
   def getTagTypes(forWhat: i32, tagNamePrefix: St): Seq[TagType] =
     // For now
     readTx(_.loadAllTagTypes())

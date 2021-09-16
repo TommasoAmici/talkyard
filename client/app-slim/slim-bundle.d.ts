@@ -520,7 +520,9 @@ declare namespace debiki2 {
       user: Pat, store?: Store, settings?: SettingsVisibleClientSide,
       makeLink?: Bo, onClick?: Ay, avoidFullName?: Bo });
 
-  function TagList(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U;
+  function TagListLive(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U;
+  function TagList(ps: { tags?: Tag[], tagTypes?: TagTypesById,
+        onClick?: () => Vo }): RElm | U;
 
   var FacebookLogoImage;
 

@@ -117,7 +117,8 @@ trait TagsRdbMixin extends SiteTx {
           select * from tags_t where site_id_c = ? and on_pat_id_c = ? """
     runQueryFindMany(query, List(siteId.asAnyRef, patId.asAnyRef), parseTag)
   }
-NEXT !!!@@@###
+
+
   def loadTagsForPages(pageIds: Iterable[PageId]): Map[PageId, ImmSeq[Tag]] = {
     val values = siteId.asAnyRef :: pageIds.toList
     val query = s"""
@@ -127,8 +128,8 @@ NEXT !!!@@@###
                   and po.site_id = ?  -- this and...
                   and po.page_id in (${ makeInListFor(pageIds) })
                   and po.unique_post_id = t.on_post_id_c
-                  and po.nr = $BodyNr
-          -- where t.site_id = ?  -- this should be equivalent
+                  and po.post_nr = $BodyNr
+          -- where t.site_id = ?  -- this should be equivalent [join_on_or_where]
           """
     runQueryBuildMultiMap(query, values, rs => {
       val pageId = getString(rs, "page_id")
@@ -136,6 +137,7 @@ NEXT !!!@@@###
       pageId -> tag
     })
   }
+
 
   def loadTagsToRenderSmallPage(pageId: PageId): Seq[Tag] = {
     // Small page, we can load all tags. [large_pages]
@@ -149,7 +151,7 @@ NEXT !!!@@@###
                   and po.site_id = ?  -- this and...
                   and (po.unique_post_id = t.on_post_id_c  or
                        po.created_by_id  = t.on_pat_id_c)
-          -- where t.site_id = ?  -- this should be equivalent
+          -- where t.site_id = ?  -- this should be equivalent [join_on_or_where]
           """
     runQueryFindMany(query, List(pageId.asAnyRef, siteId.asAnyRef), parseTag)
   }

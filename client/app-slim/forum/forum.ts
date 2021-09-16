@@ -986,6 +986,7 @@ const LoadAndListTopics = createFactory({
         minHeight: null,
         categoryId: response.categoryId,
         categoryParentId: response.categoryParentId,
+        tagTypesById: response.tagTypesById,
         topics: topics,
         showLoadMoreButton: newlyLoadedTopics.length >= NumNewTopicsPerRequest
       });
@@ -1044,6 +1045,7 @@ const LoadAndListTopics = createFactory({
 
     const topicListProps: TopicListProps = {
       topics: state.topics,
+      tagTypesById: state.tagTypesById,
       store: props.store,
       forumPath: props.forumPath,
       useTable: props.useTable,
@@ -1111,7 +1113,7 @@ export const TopicsList = createComponent({
 
     const topicElems = topics.map((topic: Topic) => {
       const topicRowProps: TopicRowProps = {
-          store, topic,
+          store, topic, tagTypesById: props.tagTypesById,
           activeCatId: activeCategory?.id, orderOffset,
           key: topic.pageId, sortOrderRoute: props.sortOrderRoute,
           doItVotesPopFirst, inTable: useTable, useNarrowLayout: props.useNarrowLayout,
@@ -1419,6 +1421,7 @@ const IconHelpMessage = {
 interface TopicRowProps {
   store: Store;
   topic: Topic;
+  tagTypesById: { [id: string]: TagType };
   activeCatId?: CatId;
   sortOrderRoute: St;
   forumPath: St;
@@ -1556,24 +1559,32 @@ const TopicRow = createComponent({
       anyPinOrHiddenIconClass = 'icon-eye-off';
     }
 
-    let excerpt;  // [7PKY2X0]
+    const tags = TagList({ tags: topic.pubTags, tagTypes: props.tagTypesById });
+
+    let mabyeTagsAfterTitle;
+    let excerptMaybeTags;  // [7PKY2X0]
     const showExcerptAsParagraph =
         topic.pinWhere === PinPageWhere.Globally ||
         (topic.pinWhere && topic.categoryId === props.activeCatId) ||
         forumPage.pageLayout >= TopicListLayout.ExcerptBelowTitle;
     if (showExcerptAsParagraph) {
-      excerpt =
-          r.p({ className: 'dw-p-excerpt' }, topic.excerpt);
+      excerptMaybeTags =
+          //r.p({ className: 'dw-p-excerpt' }, topic.excerpt);
+          r.div({ className: 'dw-p-excerpt' }, topic.excerpt, tags);
           // , r.a({ href: topic.url }, 'read more')); — no, better make excerpt click open page?
     }
     else if (forumPage.pageLayout === TopicListLayout.TitleExcerptSameLine) {
-      excerpt =
-          r.span({ className: 's_F_Ts_T_Con_B' }, topic.excerpt);
+      excerptMaybeTags =
+          r.div({ className: 's_F_Ts_T_Con_B' }, topic.excerpt, tags);
+          //r.span({ className: 's_F_Ts_T_Con_B' }, topic.excerpt);
     }
     else {
+      mabyeTagsAfterTitle = tags;
       // No excerpt.
       dieIf(forumPage.pageLayout && forumPage.pageLayout !== TopicListLayout.TitleOnly,
           'EdE5FK2W8');
+
+      // Somehow insert tags after title?         
     }
 
     let anyThumbnails;
@@ -1651,7 +1662,8 @@ const TopicRow = createComponent({
               onClick: showMoreClickHandler, to: contentLinkUrl },
             makeTitle(topic, 's_F_Ts_T_Con_Ttl ' + anyPinOrHiddenIconClass,
                 settings, me, titleLinkTag),
-            excerpt),
+            mabyeTagsAfterTitle, 
+            excerptMaybeTags),
           anyThumbnails),
         !showCategories ? null : r.td({ className: 's_F_Ts_T_CN' }, categoryName),
         r.td({ className: 's_F_Ts_T_Avs' }, userAvatars),
@@ -1672,7 +1684,7 @@ const TopicRow = createComponent({
                     TopicUpvotes(topic, false /*iconFirst*/),
               r.span({ className: 'c_F_TsL_T_NumRepls' },
                 topic.numPosts - 1, r.span({ className: 'icon-comment-empty' })))),
-          excerpt,
+          excerptMaybeTags,
           r.div({ className: 'n_Row2' },
             r.div({ className: 'c_F_TsL_T_Users' },
               userAvatars),
@@ -1829,6 +1841,7 @@ const CategoryRow = createComponent({
       return (
         r.tr({ key: topic.pageId },
           r.td({},
+            // CLEAN_UP use 'c_TpcTtl' instead of 'topic-title'.
             makeTitle(topic, 'topic-title' + pinIconClass, store.settings, me),
             r.span({ className: 'topic-details' },
               r.span({ title: numReplies + t.fc._replies },
@@ -2036,7 +2049,7 @@ function makeTitle(topic: Topic, className: string, settings: SettingsVisibleCli
   const toUrl = reactTag && reactTag !== Link ? undefined : topic.url;
   return (
       (reactTag || Link)({
-          to: toUrl, title: tooltip, className: className },
+          to: toUrl, title: tooltip, className: className + ' c_TpcTtl' },
         title));
 }
 
