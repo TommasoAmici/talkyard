@@ -411,7 +411,7 @@ const AvatarAboutAndButtons = createComponent({
     const thatIsYou = !isMe ? null :
       r.span({ className: 'esProfile_isYou' }, t.upp.you);
 
-    const pubTags = TagList({ forPat: user, store });
+    const pubTags = TagListLive({ forPat: user, store });
 
     const bio = !!user.bio &&
         r.div({ className: 's_UP_Ab_Bio' }, user.bio);

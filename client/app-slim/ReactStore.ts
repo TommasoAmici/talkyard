@@ -1559,12 +1559,12 @@ function patchTheStore(storePatch: StorePatch) {  // REFACTOR just call directly
 
   if (storePatch.newTagType) {
     const newTagType = storePatch.newTagType;
-    store.tagTypes = { ...store.tagTypes };
-    store.tagTypes[newTagType.id] = newTagType;
+    store.tagTypesById = { ...store.tagTypesById };
+    store.tagTypesById[newTagType.id] = newTagType;
   }
 
   if (storePatch.allTagTypes) {
-    store.tagTypes = storePatch.allTagTypes;
+    store.tagTypesById = groupByKeepOne(storePatch.allTagTypes, tt => tt.id);
   }
   if (storePatch.allTagTypeStatsById) {
     store.tagTypeStatsById = storePatch.allTagTypeStatsById;

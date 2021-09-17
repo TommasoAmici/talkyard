@@ -73,7 +73,7 @@ trait TagsDao {
     readTx(_.loadAllTagTypes()).filter(tt => tagTypeIds.contains(tt.id))
 
 
-  def getTagTypes(forWhat: i32, tagNamePrefix: St): Seq[TagType] =
+  def getTagTypesSeq(forWhat: i32, tagNamePrefix: St): Seq[TagType] =
     // For now
     readTx(_.loadAllTagTypes())
 

@@ -873,8 +873,9 @@ const MoreDropdownModal = createComponent({
 
     // ----- Tags
 
-    if ((isStaff(me) || isOwnPost) && !store.isEmbedded && settings.enableTags !== false
-          && !isPostDeleted) {
+    //if ((isStaff(me) || isOwnPost) && !store.isEmbedded && settings.enableTags !== false
+    //      && !isPostDeleted) {
+    if (pat_mayEditTags(me, { forPost: post, store })) {
       moreLinks.push(
         r.a({ className: 'dw-a icon-plus', onClick: this.openTagsDialog, key: 'ts' },
           t.pa.AddTags));

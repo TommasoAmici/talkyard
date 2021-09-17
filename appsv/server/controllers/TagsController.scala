@@ -70,7 +70,7 @@ class TagsController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
 
   def listTagTypes(forWhat: i32, tagNamePrefix: Opt[St]): Action[U] = GetAction { req =>
-    val tagTypes = req.dao.getTagTypes(forWhat, tagNamePrefix getOrElse "")
+    val tagTypes = req.dao.getTagTypesSeq(forWhat, tagNamePrefix getOrElse "")
     OkSafeJson(JsArray(tagTypes map JsX.JsTagType))
   }
 

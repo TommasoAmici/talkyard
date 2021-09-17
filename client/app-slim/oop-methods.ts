@@ -700,6 +700,17 @@ export function user_isGone(user: Myself | BriefUser | UserInclDetails | Partici
 }
 
 
+export function pat_mayEditTags(me: Me, ps: { forPost?: Post, forPat?: Pat,
+      store: Store }): Bo {
+  const isPostDeleted = ps.forPost && post_isDeleted(ps.forPost);
+  return !ps.store.isEmbedded &&
+          ps.store.settings.enableTags !== false &&
+          !isPostDeleted &&
+          user_isStaffOrCoreMember(me);  // for now
+}
+
+
+
 // Settings
 //----------------------------------
 

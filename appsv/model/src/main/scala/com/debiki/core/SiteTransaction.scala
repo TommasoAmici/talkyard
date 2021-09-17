@@ -282,16 +282,26 @@ trait SiteTransaction {   RENAME // to SiteTx — already started with a type Si
   def loadTagsToRenderSmallPage(pageId: PageId): Seq[Tag]
 
   // -- Old: ------------------
+  @deprecated("", "")
   def loadAllTagsAsSet(): Set[TagLabel]
+  @deprecated("", "")
   def loadTagsAndStats(): Seq[TagAndStats]
+  @deprecated("", "")
   def loadTagsByPostId(postIds: Iterable[PostId]): Map[PostId, Set[TagLabel]]
+  @deprecated("", "")
   def loadTagsForPost(postId: PostId): Set[TagLabel] =
     loadTagsByPostId(Seq(postId)).getOrElse(postId, Set.empty)
+  @deprecated("", "")
   def removeTagsFromPost(labels: Set[TagLabel], postId: PostId): Unit
+  @deprecated("", "")
   def addTagsToPost(labels: Set[TagLabel], postId: PostId, isPage: Boolean): Unit
+  @deprecated("", "")
   def renameTag(from: String, to: String): Unit
+  @deprecated("", "")
   def setTagNotfLevel(userId: UserId, tagLabel: TagLabel, notfLevel: NotfLevel): Unit
+  @deprecated("", "")
   def loadTagNotfLevels(userId: UserId): Map[TagLabel, NotfLevel]
+  @deprecated("", "")
   def listUsersWatchingTags(tags: Set[TagLabel]): Set[UserId]
   // --------------------------
 

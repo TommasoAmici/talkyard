@@ -479,10 +479,11 @@ interface OwnPageNotfPrefs {  // RENAME to MembersPageNotfPrefs?
 
 // Extend Pat, set id to a new StrangerId if not logged in?
 type Me = Myself
-interface Myself extends OwnPageNotfPrefs {   // RENAME to Me
+interface Myself extends OwnPageNotfPrefs {   // + extends Pat?  RENAME to Me
   dbgSrc?: string;
   id?: UserId;
   isStranger?: Bo;
+  // missing?: isGuest?: Bo
   isGroup?: boolean; // currently always undefined (i.e. false)
   isLoggedIn?: boolean;
   isAdmin?: boolean;
@@ -1114,8 +1115,8 @@ interface Store extends Origins, DiscStore, PartialEditorStoreState {
 
   debugStartPageId: string;
 
-  tagTypes?: { [tagTypeId: number]: TagType };
-  tagTypeStatsById?: { [tagTypeId: string]: TagTypeStats };
+  tagTypesById?: { [tagTypeId: number]: TagType };
+  tagTypeStatsById?: { [tagTypeId: number]: TagTypeStats };
 
   // old
   tagsStuff?: TagsStuff;
@@ -1953,6 +1954,7 @@ interface CatsTreeCat extends Category {
 interface TopicListProps {
   topics?: Topic[];
   store: Store;
+  tagTypesById?: TagTypesById;
   forumPath?: St;
   useTable?: Bo;
   useNarrowLayout?: Bo;

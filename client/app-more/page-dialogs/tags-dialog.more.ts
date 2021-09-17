@@ -78,7 +78,7 @@ const TagsDialog = createComponent({
     dieIf(!!ps.forPat === !!ps.forPost, 'TyE602MWEG5');
     const newState: Partial<TagsDiagState> = {
       ...ps,  // was: store,
-      curTags: _.clone(ps.forPost?.tags2 || ps.forPat?.pubTags),
+      curTags: _.clone(ps.forPost?.tags2 || ps.forPat?.pubTags || []),
     };
     this.setState(newState);
 

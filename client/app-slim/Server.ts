@@ -1630,7 +1630,7 @@ export function loadForumCategoriesTopics(forumPageId: string, topicFilter: stri
 }
 
 
-export function loadForumTopics(categoryId: string, orderOffset: OrderOffset,
+export function loadForumTopics(categoryId: Nr, orderOffset: OrderOffset,
     doneCallback: (response: LoadTopicsResponse) => void) {
   const url = '/-/list-topics?categoryId=' + categoryId + '&' +
       ServerApi.makeForumTopicsQueryParams(orderOffset);

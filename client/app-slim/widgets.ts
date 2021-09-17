@@ -372,10 +372,14 @@ export function UserName(props: {
 
 export function TagListLive(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U {
   const store: Store = ps.store;
+  if (store.settings.enableTags === false)
+    return null;
+
   const me: Me = store.me;
   const tags = (ps.forPost && ps.forPost.tags2) || (ps.forPat && ps.forPat.pubTags);
 
-  const canEditTags = user_isStaffOrCoreMember(me);  // for now
+  const canEditTags = pat_mayEditTags(me, ps);
+  // // !store.isEmbedded && user_isStaffOrCoreMember(me);  // for now
 
   const thereAreTags = tags && tags.length;
   if (!thereAreTags && !canEditTags)
@@ -384,14 +388,15 @@ export function TagListLive(ps: { forPost?: Post, forPat?: Pat, store: Store }):
   const maybeOpenTagsDiag = !canEditTags ? null : () => {
     morebundle.openTagsDialog(ps);
   }
-  return TagList({ tags, tagTypes: store.tagTypes, onClick: maybeOpenTagsDiag })
+  return TagList({ tags, tagTypesById: store.tagTypesById, onClick: maybeOpenTagsDiag })
 }
 
 
 
-export function TagList(ps: { tags?: Tag[], tagTypes?: TagTypesById, onClick?: () => Vo }): RElm | U {
+export function TagList(ps: { tags?: Tag[], tagTypesById?: TagTypesById,
+          onClick?: () => Vo }): RElm | U {
   const anyTags: Tag[] | U = ps.tags;
-  const tagTypes: TagTypesById = ps.tagTypes || {};
+  const tagTypesById: TagTypesById = ps.tagTypesById || {};
   const thereAreTags = anyTags && anyTags.length;
   const canEditTags = ps.onClick;
 
@@ -399,21 +404,26 @@ export function TagList(ps: { tags?: Tag[], tagTypes?: TagTypesById, onClick?: (
   const canEditAnyClass = !canEditTags ? '' : ' c_TagL-CanEdAny';
   const canEditThisClass = !canEditTags ? '' : ' c_TagL_Tag-CanEd';
 
+  function onClick(event: MouseEvent) {
+    event.stopPropagation();
+    event.preventDefault();
+    if (ps.onClick) ps.onClick();
+  }
   if (thereAreTags) {
     tagElms = anyTags.map((tag: Tag) => {
-      const tagType = tagTypes[tag.tagTypeId];
+      const tagType = tagTypesById[tag.tagTypeId];
       return (
           r.li({ key: tag.id },
-            r.a({ className: 'c_TagL_Tag' + canEditThisClass, onClick: ps.onClick },   // was class: esTg   
+            r.a({ className: 'c_TagL_Tag' + canEditThisClass, onClick },   // was class: esTg   
               tagType?.dispName ||
                   // In case there's some bug so the tag type wasn't found.
-                  `Tag id: ${tag.id}, type: ${tag.tagTypeId}`)));
+                  `tag_id: ${tag.id} tag_type: ${tag.tagTypeId}`)));
     });
   }
 
   if (canEditTags) {
     tagElms.push(r.li({ key: '+' },
-        Button({ onClick: ps.onClick, className: 'c_TagL_AddB' }, '+ ...' )))
+        Button({ onClick, className: 'c_TagL_AddB' }, '+ ...' )))
   }
 
   return r.ul({ className: 'c_TagL' + canEditAnyClass }, tagElms);   // was: esPA_Ts

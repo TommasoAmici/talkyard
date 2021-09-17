@@ -785,7 +785,9 @@ interface LoadAndListTopicsProps {
   sortOrderRoute: St;
   setSortOrder: (sortOrder: St, remember: Bo, slashSlug: St) => Vo;
   explSetSortOrder?: St;
+  location: ReactRouterLocation;
   match: ReactRouterMatch;
+  //history: ReactRouterHistory; present, but not in use
 
   forumPath: St;
   useTable: Bo;
@@ -798,6 +800,7 @@ interface LoadAndListTopicsProps {
 
 interface LoadAndListTopicsState {
   topics?: Topic[];
+  tagTypesById?: TagTypesById;
   minHeight?: Nr;
   showLoadMoreButton?: Bo;
 }
@@ -880,7 +883,8 @@ const LoadAndListTopics = createFactory({
   },
 
   maybeRunTour: function() {
-    const store: Store = this.props.store;
+    const props: LoadAndListTopicsProps = this.props;
+    const store: Store = props.store;
     const me: Myself = store.me;
     if (me.isAdmin && !this.tourMaybeStarted) {
       this.tourMaybeStarted = true;
@@ -910,22 +914,23 @@ const LoadAndListTopics = createFactory({
     this.loadTopics(this.props, true);
   },
 
-  loadTopics: function(nextProps, loadMore) {
+  loadTopics: function(nextProps: LoadAndListTopicsProps, loadMore) {
     if (!nextProps.activeCategory) {
       // Probably a restricted category, won't be available until user-specific-data
       // has been activated (by ReactStore.activateMyself). (6KEWM02)
       return;
     }
 
+    const curProps: LoadAndListTopicsProps = this.props;
     const isNewView =
-      this.props.location.pathname !== nextProps.location.pathname ||
-      this.props.location.search !== nextProps.location.search ||
-      this.props.topPeriod !== nextProps.topPeriod;
+            curProps.location.pathname !== nextProps.location.pathname ||
+            curProps.location.search !== nextProps.location.search ||
+            curProps.topPeriod !== nextProps.topPeriod;
 
     const store: Store = nextProps.store;
     let currentPageIsForumPage;
     _.each(store.pagesById, (page: Page) => {
-      if (page.pagePath.value !== this.props.forumPath)
+      if (page.pagePath.value !== curProps.forumPath)
         return;
       if (page.pageId === store.currentPageId) {
         currentPageIsForumPage = true;
@@ -982,14 +987,15 @@ const LoadAndListTopics = createFactory({
       // `topics` includes at least the last old topic twice.
       topics = _.uniqBy(topics, 'pageId');
       this.isLoading = false;
-      this.setState({
+      const newState: LoadAndListTopicsState = {
         minHeight: null,
-        categoryId: response.categoryId,
-        categoryParentId: response.categoryParentId,
+        // categoryId: response.categoryId,  // not in use?
+        // categoryParentId: response.categoryParentId, // not in use?
         tagTypesById: response.tagTypesById,
         topics: topics,
         showLoadMoreButton: newlyLoadedTopics.length >= NumNewTopicsPerRequest
-      });
+      };
+      this.setState(newState);
 
       // Only scroll to last position once, when opening the page. Not when loading more topics.
       if (!loadMore) {
@@ -1002,8 +1008,8 @@ const LoadAndListTopics = createFactory({
     });
   },
 
-  getOrderOffset: function(nextProps?): OrderOffset {
-    const props = nextProps || this.props;
+  getOrderOffset: function(nextProps?: LoadAndListTopicsProps): OrderOffset {
+    const props: LoadAndListTopicsProps = nextProps || this.props;
     let lastBumpedAt: number;
     let lastScore: number;
     let lastCreatedAt: number;
@@ -1069,6 +1075,7 @@ const LoadAndListTopics = createFactory({
       queryParams: (props as any as ForumButtonsProps).queryParams,
       history: (props as any as ForumButtonsProps).history,
     };
+
     return TopicsList(topicListProps);
   },
 });
@@ -1117,7 +1124,7 @@ export const TopicsList = createComponent({
           activeCatId: activeCategory?.id, orderOffset,
           key: topic.pageId, sortOrderRoute: props.sortOrderRoute,
           doItVotesPopFirst, inTable: useTable, useNarrowLayout: props.useNarrowLayout,
-          forumPath: props.forumPath };
+          forumPath: props.forumPath, history: props.history };
       return TopicRow(topicRowProps);
     });
 
@@ -1421,7 +1428,7 @@ const IconHelpMessage = {
 interface TopicRowProps {
   store: Store;
   topic: Topic;
-  tagTypesById: { [id: string]: TagType };
+  tagTypesById?: { [id: string]: TagType };
   activeCatId?: CatId;
   sortOrderRoute: St;
   forumPath: St;
@@ -1429,7 +1436,8 @@ interface TopicRowProps {
   doItVotesPopFirst: Bo;
   inTable: Bo;
   useNarrowLayout?: Bo;
-  key: St | Nr,
+  key: St | Nr;
+  history?: ReactRouterHistory;
 }
 
 
@@ -1559,7 +1567,10 @@ const TopicRow = createComponent({
       anyPinOrHiddenIconClass = 'icon-eye-off';
     }
 
-    const tags = TagList({ tags: topic.pubTags, tagTypes: props.tagTypesById });
+    const tags = settings.enableTags === false ? null :
+            TagList({ tags: topic.pubTags,
+                // store.tagTypesById on the initial page load.
+                tagTypesById: props.tagTypesById || store.tagTypesById });
 
     let mabyeTagsAfterTitle;
     let excerptMaybeTags;  // [7PKY2X0]
@@ -1627,20 +1638,22 @@ const TopicRow = createComponent({
     let titleCellTag = r.div;
     let contentLinkUrl: St | U;
     let manyLinesClass = '';  // remove, place on table insted?, see oneLineClass somewhere above.
-    let showMoreClickHandler;
+    let onTitleCellClick = () => {
+        props.history.push(topic.url);
+      };
     if (showExcerptAsParagraph) {
       manyLinesClass = ' s_F_Ts_T_Con-Para';
       // Make the whole title and paragraph block a link, not just the title.
-      titleLinkTag = r.span;
-      titleCellTag = Link;
-      contentLinkUrl = topic.url;
+      //titleLinkTag = r.span;
+      //titleCellTag = Link;
+      //contentLinkUrl = topic.url;
     }
     else if (this.state.showMoreExcerpt) {
       manyLinesClass = ' s_F_Ts_T_Con-More';
     }
     else {
       manyLinesClass = ' s_F_Ts_T_Con-OneLine';
-      showMoreClickHandler = this.showMoreExcerpt;
+      onTitleCellClick = this.showMoreExcerpt;
     }
 
     const orderOffset: OrderOffset = props.orderOffset;
@@ -1659,7 +1672,7 @@ const TopicRow = createComponent({
                 TopicUpvotes(topic, true /*iconFirst*/)),
         r.td({ className: 'dw-tpc-title e2eTopicTitle' },
           titleCellTag({ className: 's_F_Ts_T_Con' + manyLinesClass,
-              onClick: showMoreClickHandler, to: contentLinkUrl },
+              onClick: onTitleCellClick }, // , to: contentLinkUrl },
             makeTitle(topic, 's_F_Ts_T_Con_Ttl ' + anyPinOrHiddenIconClass,
                 settings, me, titleLinkTag),
             mabyeTagsAfterTitle, 

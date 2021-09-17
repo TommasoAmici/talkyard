@@ -65,7 +65,8 @@ trait RenderedPageHtmlDao {
     val pageId = pageRequest.thePageId
 
     globals.mostMetrics.getRenderPageTimer(pageRequest.pageRole).time {
-      val jsonResult: PageToJsonResult = jsonMaker.pageToJson(pageId, renderParams)
+      val jsonResult: PageToJsonResult =
+            jsonMaker.pageToJson(pageId, renderParams)
 
       // This is the html for the topic and replies, i.e. the main content / interesting thing.
       RENAME // 'HtmlContent'  to 'PagePosts'?  More specific?
@@ -83,7 +84,7 @@ trait RenderedPageHtmlDao {
 
       // This is the html for the whole page: <html>, <head>, <body>, and <script>s,
       // and the html content.
-      val pageHtml: String = views.html.templates.page(tpi).body
+      val pageHtml: St = views.html.templates.page(tpi).body
 
       RenderedPage(pageHtml, jsonResult.reactStoreJsonString, jsonResult.unapprovedPostAuthorIds)
     }

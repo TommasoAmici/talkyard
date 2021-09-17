@@ -521,7 +521,7 @@ declare namespace debiki2 {
       makeLink?: Bo, onClick?: Ay, avoidFullName?: Bo });
 
   function TagListLive(ps: { forPost?: Post, forPat?: Pat, store: Store }): RElm | U;
-  function TagList(ps: { tags?: Tag[], tagTypes?: TagTypesById,
+  function TagList(ps: { tags?: Tag[], tagTypesById?: TagTypesById,
         onClick?: () => Vo }): RElm | U;
 
   var FacebookLogoImage;
